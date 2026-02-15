@@ -518,15 +518,17 @@ export default function DashboardLayout() {
           )}
         </div>
 
-        <DetailPanel
-          container={selectedContainer}
-          containerDetail={containerDetail}
-          detailLoading={detailLoading}
-          rightTab={rightTab}
-          onRightTabChange={setRightTab}
-          onOpenShell={() => setShellOpen(true)}
-          onAction={handleAction}
-        />
+        {(activeTab === "STACKS" || (activeTab === "LOGS" && selectedContainer)) && (
+          <DetailPanel
+            container={selectedContainer}
+            containerDetail={containerDetail}
+            detailLoading={detailLoading}
+            rightTab={rightTab}
+            onRightTabChange={setRightTab}
+            onOpenShell={() => setShellOpen(true)}
+            onAction={handleAction}
+          />
+        )}
       </div>
 
       <StatusBar
