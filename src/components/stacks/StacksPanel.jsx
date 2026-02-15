@@ -1,6 +1,6 @@
 import StackGroup from './StackGroup';
 
-export default function StacksPanel({ stacks, expandedStacks, onToggleStack, selectedContainerId, onSelectContainer, onStackAction }) {
+export default function StacksPanel({ stacks, expandedStacks, onToggleStack, selectedContainerId, onSelectContainer, onStackAction, onStackEdit, activeStreamingStack }) {
   return (
     <div style={{ flex: 1, overflow: "auto" }}>
       {stacks.map((stack, si) => (
@@ -13,6 +13,8 @@ export default function StacksPanel({ stacks, expandedStacks, onToggleStack, sel
           selectedContainerId={selectedContainerId}
           onSelectContainer={onSelectContainer}
           onStackAction={onStackAction}
+          onStackEdit={onStackEdit}
+          isStreaming={stack.name === activeStreamingStack}
         />
       ))}
     </div>

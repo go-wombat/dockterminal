@@ -1,30 +1,16 @@
 import ContainerRow from './ContainerRow';
+import ActionBtn from '../ui/ActionBtn';
 import styles from './StackGroup.module.css';
 
-export default function StackGroup({ stack, index, expanded, onToggle, selectedContainerId, onSelectContainer, onStackAction }) {
+export default function StackGroup({ stack, index, expanded, onToggle, selectedContainerId, onSelectContainer, onStackAction, onStackEdit, isStreaming }) {
   const running = stack.containers.filter(c => c.status === "running").length;
   const total = stack.containers.length;
   const isManaged = stack.managed !== false;
   const isStandalone = stack.name === 'standalone';
-  const showActions = isManaged && !isStandalone && onStackAction;
+  const showActions = isManaged && !isStandalone && onStackAction && !isStreaming;
   const isUp = stack.status === 'running' || stack.status === 'partial';
   const statusColor = !isManaged ? "#005522" : stack.status === "running" ? "#00ff41" : stack.status === "partial" ? "#ffaa00" : "#555";
   const statusIcon = stack.status === "running" ? "●" : stack.status === "partial" ? "⚠" : "○";
-
-  const actionBtn = (label, action, color) => (
-    <span
-      onClick={(e) => { e.stopPropagation(); onStackAction(stack.name, action); }}
-      style={{
-        color, fontSize: 9, cursor: 'pointer', padding: '2px 4px',
-        border: `1px solid ${color}`, opacity: 0.8,
-        transition: 'opacity 0.15s',
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.8'; }}
-    >
-      {label}
-    </span>
-  );
 
   return (
     <div style={{ animation: `fadeIn 0.3s ease ${index * 0.04}s both` }}>
@@ -46,15 +32,21 @@ export default function StackGroup({ stack, index, expanded, onToggle, selectedC
         </span>
         <span style={{ color: "#007a22", fontSize: 11 }}>{stack.path}</span>
         <span style={{ color: statusColor, fontSize: 11, textTransform: "uppercase" }}>{stack.status === "partial" ? "DEGRADED" : stack.status}</span>
-        <span style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-          {showActions && isUp && actionBtn('▼ DOWN', 'down', '#ff3333')}
-        </span>
-        <span style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-          {showActions && isUp && actionBtn('↻ RESTART', 'restart', '#ffaa00')}
-        </span>
-        <span style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-          {showActions && !isUp && actionBtn('▲ UP', 'up', '#00ff41')}
-        </span>
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
+          {showActions && isUp && (
+            <>
+              <ActionBtn label="⟳" title="RESTART STACK" color="#ffaa00" onClick={() => onStackAction(stack.name, 'restart')} />
+              <ActionBtn label="■" title="STOP STACK" color="#ff3333" onClick={() => onStackAction(stack.name, 'down')} />
+            </>
+          )}
+          {showActions && !isUp && (
+            <ActionBtn label="▶" title="START STACK" color="#00ff41" onClick={() => onStackAction(stack.name, 'up')} />
+          )}
+          {isManaged && !isStandalone && onStackEdit && !isStreaming && (
+            <ActionBtn label="✎" title="EDIT COMPOSE" onClick={() => onStackEdit(stack.name)} />
+          )}
+          {isStreaming && <span style={{ color: '#ffaa00', fontSize: 9, animation: 'blink 1s step-end infinite' }}>● RUNNING...</span>}
+        </div>
       </div>
 
       {expanded && (

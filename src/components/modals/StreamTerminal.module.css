@@ -1,0 +1,138 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.terminal {
+  width: 75vw;
+  height: 70vh;
+  background: #080c08;
+  border: 1px solid #00ff41;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 40px rgba(0, 255, 65, 0.15), inset 0 0 40px rgba(0, 255, 65, 0.02);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid #004d14;
+  background: rgba(0, 255, 65, 0.03);
+}
+
+.headerTitle {
+  font-size: 12px;
+  color: #00ff41;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerRight {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.statusDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.statusLabel {
+  font-size: 10px;
+}
+
+.output {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.line {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  font-family: inherit;
+}
+
+.lineStdout {
+  color: #00cc38;
+}
+
+.lineStderr {
+  color: #ffaa00;
+}
+
+.lineSystem {
+  color: #007a22;
+  font-style: italic;
+}
+
+.lineSuccess {
+  color: #00ff41;
+  font-weight: 700;
+}
+
+.lineError {
+  color: #ff3333;
+  font-weight: 700;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  border-top: 1px solid #004d14;
+  background: rgba(0, 255, 65, 0.03);
+}
+
+.closeBtn {
+  color: #00ff41;
+  background: transparent;
+  border: 1px solid #00ff41;
+  padding: 4px 16px;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.closeBtn:hover {
+  background: rgba(0, 255, 65, 0.1);
+}
+
+.closeBtnDanger {
+  color: #ff3333;
+  border-color: #ff3333;
+}
+
+.closeBtnDanger:hover {
+  background: rgba(255, 51, 51, 0.1);
+}
+
+.cursor {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  background: #00ff41;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}

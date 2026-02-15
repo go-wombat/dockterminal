@@ -1,4 +1,4 @@
-import { execSync, execFileSync, spawnSync } from 'child_process';
+import { execSync, execFileSync, spawnSync, spawn } from 'child_process';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
@@ -652,6 +652,115 @@ export function stackAction(stackName, action) {
   }
 }
 
+// --- Streaming stack action (SSE) ---
+
+export const activeOperations = new Map();
+
+export function streamStackAction(stackName, action, res) {
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(stackName)) {
+    return { error: 'Invalid stack name' };
+  }
+
+  const validActions = { up: true, down: true, restart: true, stop: true };
+  if (!validActions[action]) {
+    return { error: `Unknown action: ${action}` };
+  }
+
+  if (activeOperations.has(stackName)) {
+    return { error: `Operation already running on stack: ${stackName}` };
+  }
+
+  // Find compose file path
+  let composePath = null;
+  if (stacksCache) {
+    const cached = stacksCache.stacks.find(s => s.name === stackName);
+    if (cached?.path) composePath = cached.path;
+  }
+  if (!composePath) {
+    const managed = scanManagedStacks();
+    composePath = managed.get(stackName);
+  }
+  if (!composePath) {
+    return { error: `Compose file not found for stack: ${stackName}` };
+  }
+
+  const actionArgs = {
+    up:      ['compose', '-f', composePath, 'up', '-d', '--remove-orphans'],
+    down:    ['compose', '-f', composePath, 'down'],
+    restart: ['compose', '-f', composePath, 'restart'],
+    stop:    ['compose', '-f', composePath, 'stop'],
+  };
+
+  // Set SSE headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+
+  const send = (event, data) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  send('start', { stackName, action });
+
+  const proc = spawn('docker', actionArgs[action], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  activeOperations.set(stackName, proc);
+
+  const timeout = setTimeout(() => {
+    proc.kill('SIGTERM');
+    send('output', { stream: 'system', text: 'Operation timed out (120s)' });
+    send('end', { code: 1, signal: 'SIGTERM' });
+    cleanup();
+  }, 120000);
+
+  const cleanup = () => {
+    clearTimeout(timeout);
+    activeOperations.delete(stackName);
+    stacksCache = null;
+  };
+
+  proc.stdout.on('data', (chunk) => {
+    const text = chunk.toString();
+    for (const line of text.split('\n')) {
+      if (line) send('output', { stream: 'stdout', text: line });
+    }
+  });
+
+  proc.stderr.on('data', (chunk) => {
+    const text = chunk.toString();
+    for (const line of text.split('\n')) {
+      if (line) send('output', { stream: 'stderr', text: line });
+    }
+  });
+
+  proc.on('close', (code, signal) => {
+    send('end', { code: code ?? 0, signal: signal || null });
+    cleanup();
+    res.end();
+  });
+
+  proc.on('error', (err) => {
+    send('output', { stream: 'system', text: `Process error: ${err.message}` });
+    send('end', { code: 1, signal: null });
+    cleanup();
+    res.end();
+  });
+
+  // Kill process if client disconnects
+  res.on('close', () => {
+    if (proc.exitCode === null) {
+      proc.kill('SIGTERM');
+    }
+    cleanup();
+  });
+
+  return null; // signals SSE is streaming (no JSON response needed)
+}
+
 // --- Bulk stack operations ---
 
 export function restartAllStacks() {
@@ -698,6 +807,46 @@ export function dockerPrune() {
     return { ok: true, output };
   } catch (err) {
     return { error: err.stderr?.toString() || err.message };
+  }
+}
+
+// --- Read/update stack compose file ---
+
+export function getStackFile(stackName) {
+  if (!stackName || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(stackName)) {
+    return { error: 'Invalid stack name' };
+  }
+  const managed = scanManagedStacks();
+  const composePath = managed.get(stackName);
+  if (!composePath) {
+    return { error: `Stack "${stackName}" is not a managed stack` };
+  }
+  try {
+    const yaml = fs.readFileSync(composePath, 'utf8');
+    return { yaml, path: composePath };
+  } catch (err) {
+    return { error: `Failed to read compose file: ${err.message}` };
+  }
+}
+
+export function updateStackFile(stackName, yaml) {
+  if (!stackName || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(stackName)) {
+    return { error: 'Invalid stack name' };
+  }
+  if (!yaml || typeof yaml !== 'string' || yaml.trim().length === 0) {
+    return { error: 'Compose YAML content is required.' };
+  }
+  const managed = scanManagedStacks();
+  const composePath = managed.get(stackName);
+  if (!composePath) {
+    return { error: `Stack "${stackName}" is not a managed stack` };
+  }
+  try {
+    fs.writeFileSync(composePath, yaml, 'utf8');
+    stacksCache = null;
+    return { ok: true };
+  } catch (err) {
+    return { error: `Failed to write compose file: ${err.message}` };
   }
 }
 

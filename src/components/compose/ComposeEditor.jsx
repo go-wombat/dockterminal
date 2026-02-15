@@ -1,5 +1,6 @@
 import { useMemo, useRef, useCallback } from 'react';
 import styles from './ComposeEditor.module.css';
+import ComposeGraph from './ComposeGraph';
 
 const TEMPLATES = [
   {
@@ -63,35 +64,108 @@ volumes:
   },
 ];
 
-function parseServices(yaml) {
+function parseCompose(yaml) {
   const lines = yaml.split("\n");
   const services = [];
-  let inServices = false;
+  const networks = [];
+  let topLevel = null; // "services" | "networks" | "volumes" | null
   let currentService = null;
-  let currentImage = "";
-  let currentPorts = [];
+  let currentProp = null; // "ports" | "depends_on" | "networks" | "volumes" | "environment"
+  let svc = null;
+
+  const pushService = () => {
+    if (svc) services.push(svc);
+  };
 
   lines.forEach(line => {
     const trimmed = line.trim();
-    if (trimmed === "services:") { inServices = true; return; }
-    if (inServices && /^  \S/.test(line) && trimmed.endsWith(":")) {
-      if (currentService) services.push({ name: currentService, image: currentImage, ports: currentPorts });
-      currentService = trimmed.replace(":", "");
-      currentImage = "";
-      currentPorts = [];
+    if (!trimmed || trimmed.startsWith("#")) return;
+
+    // Detect top-level sections (no indent)
+    if (/^\S/.test(line) && trimmed.endsWith(":")) {
+      pushService();
+      currentService = null;
+      svc = null;
+      currentProp = null;
+      const section = trimmed.replace(":", "");
+      if (section === "services" || section === "networks" || section === "volumes") {
+        topLevel = section;
+      } else {
+        topLevel = null;
+      }
+      return;
     }
-    if (currentService && trimmed.startsWith("image:")) currentImage = trimmed.replace("image:", "").trim();
-    if (currentService && trimmed.startsWith("- \"") && trimmed.includes(":")) currentPorts.push(trimmed.replace(/^- "?|"?$/g, ""));
+
+    // Top-level networks section — collect network names
+    if (topLevel === "networks" && /^  \S/.test(line) && trimmed.endsWith(":")) {
+      networks.push(trimmed.replace(":", ""));
+      return;
+    }
+
+    // Inside services section
+    if (topLevel === "services") {
+      // Service name (2-space indent, ends with colon)
+      if (/^  \S/.test(line) && trimmed.endsWith(":")) {
+        pushService();
+        currentService = trimmed.replace(":", "");
+        svc = { name: currentService, image: "", status: "created", ports: [], depends_on: [], networks: [], volumes: [], env: {} };
+        currentProp = null;
+        return;
+      }
+
+      if (!svc) return;
+
+      // Service-level properties (4-space indent)
+      if (/^    \S/.test(line) && !trimmed.startsWith("-")) {
+        const colonIdx = trimmed.indexOf(":");
+        if (colonIdx === -1) return;
+        const key = trimmed.substring(0, colonIdx).trim();
+        const val = trimmed.substring(colonIdx + 1).trim();
+
+        if (key === "image") { svc.image = val; currentProp = null; return; }
+        if (key === "ports") { currentProp = "ports"; return; }
+        if (key === "depends_on") { currentProp = "depends_on"; return; }
+        if (key === "networks") { currentProp = "networks"; return; }
+        if (key === "volumes") { currentProp = "volumes"; return; }
+        if (key === "environment") { currentProp = "environment"; return; }
+
+        // Other properties — reset current list context
+        currentProp = null;
+        return;
+      }
+
+      // List items (6-space indent, starts with "- ")
+      if (trimmed.startsWith("- ") && currentProp) {
+        const val = trimmed.substring(2).replace(/^["']|["']$/g, "");
+        if (currentProp === "ports") svc.ports.push(val);
+        else if (currentProp === "depends_on") svc.depends_on.push(val);
+        else if (currentProp === "networks") svc.networks.push(val);
+        else if (currentProp === "volumes") svc.volumes.push(val);
+        return;
+      }
+
+      // Map items under environment (6-space indent, KEY: value)
+      if (currentProp === "environment" && /^      \S/.test(line)) {
+        const colonIdx = trimmed.indexOf(":");
+        if (colonIdx > 0) {
+          const k = trimmed.substring(0, colonIdx).trim();
+          const v = trimmed.substring(colonIdx + 1).trim();
+          svc.env[k] = v;
+        }
+        return;
+      }
+    }
   });
-  if (currentService) services.push({ name: currentService, image: currentImage, ports: currentPorts });
-  return services;
+
+  pushService();
+  return { services, networks };
 }
 
-export default function ComposeEditor({ stackName, onStackNameChange, yaml, onYamlChange, onDeploy, onCancel, deploying }) {
+export default function ComposeEditor({ stackName, onStackNameChange, yaml, onYamlChange, onDeploy, onCancel, deploying, editMode = false }) {
   const editorRef = useRef(null);
   const lineNumRef = useRef(null);
 
-  const services = useMemo(() => parseServices(yaml), [yaml]);
+  const parsed = useMemo(() => parseCompose(yaml), [yaml]);
   const lineCount = yaml.split("\n").length;
 
   const handleScroll = useCallback(() => {
@@ -124,7 +198,7 @@ export default function ComposeEditor({ stackName, onStackNameChange, yaml, onYa
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <span className={styles.title}>+ NEW STACK</span>
+          <span className={styles.title}>{editMode ? "✎ EDIT STACK" : "+ NEW STACK"}</span>
           <div className={styles.nameInput}>
             <span className={styles.nameLabel}>NAME:</span>
             <input
@@ -133,7 +207,9 @@ export default function ComposeEditor({ stackName, onStackNameChange, yaml, onYa
               onChange={e => onStackNameChange(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
               placeholder="my-stack"
               spellCheck={false}
-              autoFocus
+              autoFocus={!editMode}
+              disabled={editMode}
+              style={editMode ? { opacity: 0.5 } : undefined}
             />
           </div>
           {stackName && <span className={styles.pathPreview}>~/stacks/{stackName}/compose.yaml</span>}
@@ -144,7 +220,7 @@ export default function ComposeEditor({ stackName, onStackNameChange, yaml, onYa
             disabled={!stackName || deploying}
             onClick={onDeploy}
           >
-            {deploying ? "DEPLOYING..." : "\u25B6 DEPLOY"}
+            {deploying ? "SAVING..." : editMode ? "SAVE & RESTART" : "\u25B6 DEPLOY"}
           </button>
           <button className={styles.cancelBtn} onClick={onCancel}>
             CANCEL
@@ -178,42 +254,30 @@ export default function ComposeEditor({ stackName, onStackNameChange, yaml, onYa
 
         {/* Preview pane */}
         <div className={styles.previewPane}>
-          <div className={styles.sectionLabel}>PREVIEW</div>
-          {services.length === 0 ? (
-            <div className={styles.emptyPreview}>Add services to compose.yaml to see preview</div>
-          ) : (
-            <>
-              <div className={styles.serviceCount}>
-                {services.length} service{services.length !== 1 ? "s" : ""} detected
-              </div>
-              {services.map((svc, i) => (
-                <div key={i} className={styles.serviceCard}>
-                  <div className={styles.serviceName}>&#x25CF; {svc.name}</div>
-                  {svc.image && (
-                    <div className={styles.serviceMeta}>
-                      IMAGE: <span>{svc.image}</span>
-                    </div>
-                  )}
-                  {svc.ports.length > 0 && (
-                    <div className={`${styles.serviceMeta} ${styles.serviceMetaPorts}`} style={{ marginTop: 2 }}>
-                      PORTS: <span>{svc.ports.join(", ")}</span>
-                    </div>
-                  )}
+          <div className={styles.sectionLabel}>
+            PREVIEW
+            {parsed.services.length > 0 && (
+              <span className={styles.serviceCount}>
+                {" \u2014 "}{parsed.services.length} service{parsed.services.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+          <div className={styles.graphContainer}>
+            <ComposeGraph services={parsed.services} networks={parsed.networks} />
+          </div>
+
+          {/* Templates (hidden in edit mode) */}
+          {!editMode && (
+            <div className={styles.templatesSection}>
+              <div className={styles.sectionLabel}>TEMPLATES</div>
+              {TEMPLATES.map((tpl, i) => (
+                <div key={i} className={styles.templateCard} onClick={() => handleTemplate(tpl)}>
+                  <div className={styles.templateName}>{tpl.name}</div>
+                  <div className={styles.templateDesc}>{tpl.desc}</div>
                 </div>
               ))}
-            </>
+            </div>
           )}
-
-          {/* Templates */}
-          <div className={styles.templatesSection}>
-            <div className={styles.sectionLabel}>TEMPLATES</div>
-            {TEMPLATES.map((tpl, i) => (
-              <div key={i} className={styles.templateCard} onClick={() => handleTemplate(tpl)}>
-                <div className={styles.templateName}>{tpl.name}</div>
-                <div className={styles.templateDesc}>{tpl.desc}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

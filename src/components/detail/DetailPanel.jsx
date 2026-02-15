@@ -1,4 +1,8 @@
+import { useState } from 'react';
+import ActionBtn from '../ui/ActionBtn';
 import styles from './DetailPanel.module.css';
+
+const SENSITIVE_RE = /password|passwd|secret|token|api.?key|private.?key|credential|auth|jwt|session|cookie|encryption|signing/i;
 
 export default function DetailPanel({ container, containerDetail, detailLoading, rightTab, onRightTabChange, onOpenShell, onAction }) {
   if (!container) {
@@ -46,6 +50,7 @@ export default function DetailPanel({ container, containerDetail, detailLoading,
 
   const envVars = containerDetail?.env || [];
   const mounts = containerDetail?.mounts || [];
+  const [revealedKeys, setRevealedKeys] = useState(new Set());
 
   return (
     <div className={styles.panel}>
@@ -116,12 +121,33 @@ export default function DetailPanel({ container, containerDetail, detailLoading,
               {!detailLoading && envVars.length === 0 && (
                 <div style={{ color: '#007a22' }}>No environment variables</div>
               )}
-              {envVars.map(([k, v]) => (
-                <div key={k} className={styles.envRow}>
-                  <span style={{ color: "#007a22" }}>{k}</span>
-                  <span style={{ color: "#00cc38" }}>{v}</span>
-                </div>
-              ))}
+              {envVars.map(([k, v]) => {
+                const sensitive = SENSITIVE_RE.test(k);
+                const masked = sensitive && !revealedKeys.has(k);
+                return (
+                  <div key={k} className={styles.envRow}>
+                    <span style={{ color: "#007a22" }}>
+                      {sensitive && <span style={{ color: "#553333", marginRight: 4 }}>●</span>}
+                      {k}
+                    </span>
+                    <span
+                      style={{
+                        color: masked ? "#003310" : "#00cc38",
+                        cursor: sensitive ? "pointer" : "default",
+                        letterSpacing: masked ? 2 : 0,
+                      }}
+                      onClick={sensitive ? () => setRevealedKeys(prev => {
+                        const next = new Set(prev);
+                        if (next.has(k)) next.delete(k); else next.add(k);
+                        return next;
+                      }) : undefined}
+                      title={sensitive ? (masked ? "Click to reveal" : "Click to hide") : undefined}
+                    >
+                      {masked ? "••••••••" : v}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -143,48 +169,21 @@ export default function DetailPanel({ container, containerDetail, detailLoading,
           {/* Action Buttons — hidden for unmanaged (external) containers */}
           {container.managed !== false && (
             <div className={styles.actions}>
-              <div
-                onClick={() => { if (container.status === "running") onOpenShell(); }}
-                className={styles.shellBtn}
-                style={{
-                  border: container.status === "running" ? "1px solid #00ff41" : "1px solid #004d14",
-                  color: container.status === "running" ? "#00ff41" : "#004d14",
-                  cursor: container.status === "running" ? "pointer" : "not-allowed",
-                }}
-                onMouseEnter={e => { if (container.status === "running") e.currentTarget.style.background = "rgba(0,255,65,0.15)"; }}
-                onMouseLeave={e => e.currentTarget.style.background = "rgba(0,255,65,0.05)"}
-              >
-                {">"} OPEN SHELL
-              </div>
+              <ActionBtn label="> OPEN SHELL" title="OPEN SHELL" color="#00ff41" disabled={container.status !== "running"} onClick={onOpenShell} />
 
               <div className={styles.actionGrid}>
                 {["RESTART", "STOP", "START", "REMOVE"].map(action => {
                   const disabled = (action === "START" && container.status === "running")
                     || (action === "STOP" && container.status !== "running");
                   return (
-                    <div
+                    <ActionBtn
                       key={action}
-                      onClick={() => {
-                        if (!disabled) onAction(action);
-                      }}
-                      className={styles.actionBtn}
-                      style={{
-                        border: `1px solid ${action === "REMOVE" ? "#ff3333" : disabled ? "#003310" : "#004d14"}`,
-                        color: action === "REMOVE" ? "#ff3333" : disabled ? "#003310" : "#00aa30",
-                        cursor: disabled ? "not-allowed" : "pointer",
-                      }}
-                      onMouseEnter={e => {
-                        if (disabled) return;
-                        e.currentTarget.style.background = action === "REMOVE" ? "rgba(255,51,51,0.1)" : "rgba(0,255,65,0.05)";
-                        e.currentTarget.style.borderColor = action === "REMOVE" ? "#ff3333" : "#00ff41";
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.borderColor = action === "REMOVE" ? "#ff3333" : disabled ? "#003310" : "#004d14";
-                      }}
-                    >
-                      [{action}]
-                    </div>
+                      label={`[${action}]`}
+                      title={action}
+                      color={action === "REMOVE" ? "#ff3333" : "#00aa30"}
+                      disabled={disabled}
+                      onClick={() => onAction(action)}
+                    />
                   );
                 })}
               </div>

@@ -29,6 +29,16 @@
   background: rgba(0, 255, 65, 0.1);
 }
 
+.rowStopped {
+  composes: row;
+  opacity: 0.6;
+}
+
+.rowStopped:hover {
+  opacity: 0.85;
+  background: rgba(0, 255, 65, 0.03);
+}
+
 .rowError {
   composes: row;
   background: rgba(255, 51, 51, 0.03);

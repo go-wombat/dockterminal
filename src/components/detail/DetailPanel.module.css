@@ -121,27 +121,9 @@
   margin-top: 20px;
 }
 
-.shellBtn {
-  padding: 10px 12px;
-  font-size: 12px;
-  letter-spacing: 1.5px;
-  text-align: center;
-  background: rgba(0, 255, 65, 0.05);
-  transition: all 0.2s;
-  font-weight: 700;
-}
-
 .actionGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
 
-.actionBtn {
-  padding: 6px 12px;
-  cursor: pointer;
-  font-size: 11px;
-  letter-spacing: 1px;
-  text-align: center;
-  transition: all 0.2s;
-}

@@ -11,7 +11,10 @@ import {
   execInContainer,
   containerAction,
   stackAction,
+  streamStackAction,
   createStack,
+  getStackFile,
+  updateStackFile,
   restartAllStacks,
   pullAllImages,
   dockerPrune,
@@ -119,6 +122,28 @@ function systemInfoPlugin() {
         }
         if (url === '/api/stacks/prune' && req.method === 'POST') {
           return json(res, dockerPrune());
+        }
+
+        // /api/stack/:name/file (GET — read compose file)
+        const fileGetMatch = url.match(/^\/api\/stack\/([a-zA-Z0-9][a-zA-Z0-9_.-]*)\/file$/);
+        if (fileGetMatch && req.method === 'GET') {
+          return json(res, getStackFile(fileGetMatch[1]));
+        }
+
+        // /api/stack/:name/file (PUT — update compose file)
+        if (fileGetMatch && req.method === 'PUT') {
+          const body = await readBody(req);
+          return json(res, updateStackFile(fileGetMatch[1], body.yaml));
+        }
+
+        // /api/stack/:name/stream?action= (GET — SSE)
+        const streamMatch = url.match(/^\/api\/stack\/([a-zA-Z0-9][a-zA-Z0-9_.-]*)\/stream\?action=(up|down|restart|stop)$/);
+        if (streamMatch && req.method === 'GET') {
+          const name = streamMatch[1];
+          const action = streamMatch[2];
+          const err = streamStackAction(name, action, res);
+          if (err) return json(res, err);
+          return; // SSE is streaming
         }
 
         // /api/stack/:name/action (POST)

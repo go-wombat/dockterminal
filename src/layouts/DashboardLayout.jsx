@@ -12,6 +12,7 @@ import LogsPanel from '../components/logs/LogsPanel';
 import AIAgentPanel from '../components/ai/AIAgentPanel';
 import DetailPanel from '../components/detail/DetailPanel';
 import ShellTerminal from '../components/modals/ShellTerminal';
+import StreamTerminal from '../components/modals/StreamTerminal';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import { useClock } from '../hooks/useClock';
 import { useSystemInfo } from '../hooks/useSystemInfo';
@@ -63,10 +64,12 @@ export default function DashboardLayout() {
   const [logLevels, setLogLevels] = useState({ INFO: true, WARN: true, ERR: true });
   const [actionResult, setActionResult] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(null); // { stackName, yaml } or null
   const [newStackName, setNewStackName] = useState("");
   const [newStackYaml, setNewStackYaml] = useState("services:\n  app:\n    image: nginx:alpine\n    ports:\n      - \"8080:80\"\n    restart: unless-stopped\n");
   const [stackSearch, setStackSearch] = useState("");
   const [deploying, setDeploying] = useState(false);
+  const [streamingOp, setStreamingOp] = useState(null);
 
   // Auto-expand managed non-stopped stacks when data arrives
   useEffect(() => {
@@ -104,11 +107,12 @@ export default function DashboardLayout() {
     setTimeout(advance, 300);
   }, []);
 
-  // Derived values
-  const runningCount = containers.filter(c => c.status === "running").length;
-  const faultCount = containers.filter(c => c.status !== "running").length;
+  // Derived values (managed-only for header counters)
+  const managedContainers = containers.filter(c => c.managed);
+  const runningCount = managedContainers.filter(c => c.status === "running").length;
+  const faultCount = managedContainers.filter(c => c.status !== "running").length;
   const stacksRunning = stacks.filter(s => s.status === "running").length;
-  const stacksDegraded = stacks.filter(s => s.status === "partial").length;
+  const stacksDegraded = stacks.filter(s => s.managed && s.status === "partial").length;
 
   const analysis = useMemo(() => generateAnalysis(containers), [containers]);
 
@@ -182,27 +186,11 @@ export default function DashboardLayout() {
     setTimeout(() => setActionResult(null), 3000);
   };
 
-  const handleExecuteStackAction = async () => {
+  const handleExecuteStackAction = () => {
     if (!confirmAction) return;
     const { stackName, action } = confirmAction;
-    try {
-      const res = await fetch(`/api/stack/${stackName}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: action.toLowerCase() }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        setActionResult({ ok: false, msg: data.error });
-      } else {
-        setActionResult({ ok: true, msg: `Stack ${action} executed successfully` });
-        refreshStacks();
-      }
-    } catch (err) {
-      setActionResult({ ok: false, msg: err.message });
-    }
     setConfirmAction(null);
-    setTimeout(() => setActionResult(null), 3000);
+    setStreamingOp({ stackName, action: action.toLowerCase() });
   };
 
   const handleExecuteFix = (fix) => {
@@ -285,8 +273,59 @@ export default function DashboardLayout() {
     setTimeout(() => setActionResult(null), 3000);
   };
 
+  // Stack edit handlers
+  const handleStackEdit = async (stackName) => {
+    try {
+      const res = await fetch(`/api/stack/${stackName}/file`);
+      const data = await res.json();
+      if (data.error) {
+        setActionResult({ ok: false, msg: data.error });
+        setTimeout(() => setActionResult(null), 3000);
+        return;
+      }
+      setEditing({ stackName, yaml: data.yaml });
+      setNewStackName(stackName);
+      setNewStackYaml(data.yaml);
+      setCreating(true);
+      setActiveTab("STACKS");
+    } catch (err) {
+      setActionResult({ ok: false, msg: err.message });
+      setTimeout(() => setActionResult(null), 3000);
+    }
+  };
+
+  const handleSaveStack = async () => {
+    if (!editing) return;
+    setDeploying(true);
+    try {
+      const res = await fetch(`/api/stack/${editing.stackName}/file`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yaml: newStackYaml }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setActionResult({ ok: false, msg: data.error });
+        setDeploying(false);
+        setTimeout(() => setActionResult(null), 3000);
+        return;
+      }
+      const restartName = editing.stackName;
+      setCreating(false);
+      setEditing(null);
+      setNewStackName("");
+      setNewStackYaml("services:\n  app:\n    image: nginx:alpine\n    ports:\n      - \"8080:80\"\n    restart: unless-stopped\n");
+      setStreamingOp({ stackName: restartName, action: 'restart' });
+    } catch (err) {
+      setActionResult({ ok: false, msg: err.message });
+      setTimeout(() => setActionResult(null), 3000);
+    }
+    setDeploying(false);
+  };
+
   // Compose editor handlers
   const handleStartCompose = () => {
+    setEditing(null);
     setCreating(true);
     setActiveTab("STACKS");
   };
@@ -298,33 +337,31 @@ export default function DashboardLayout() {
       const res = await fetch('/api/stack/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newStackName, yaml: newStackYaml, deploy: true }),
+        body: JSON.stringify({ name: newStackName, yaml: newStackYaml, deploy: false }),
       });
       const data = await res.json();
       if (data.error) {
         setActionResult({ ok: false, msg: data.error });
-      } else if (data.warning) {
-        setActionResult({ ok: true, msg: `Stack "${newStackName}" created (deploy warning: ${data.warning})` });
-        setCreating(false);
-        setNewStackName("");
-        setNewStackYaml("services:\n  app:\n    image: nginx:alpine\n    ports:\n      - \"8080:80\"\n    restart: unless-stopped\n");
-        refreshStacks();
-      } else {
-        setActionResult({ ok: true, msg: `Stack "${newStackName}" ${data.deployed ? 'deployed' : 'created'} successfully` });
-        setCreating(false);
-        setNewStackName("");
-        setNewStackYaml("services:\n  app:\n    image: nginx:alpine\n    ports:\n      - \"8080:80\"\n    restart: unless-stopped\n");
-        refreshStacks();
+        setDeploying(false);
+        setTimeout(() => setActionResult(null), 3000);
+        return;
       }
+      // Files created — now stream the deploy
+      const deployName = newStackName;
+      setCreating(false);
+      setNewStackName("");
+      setNewStackYaml("services:\n  app:\n    image: nginx:alpine\n    ports:\n      - \"8080:80\"\n    restart: unless-stopped\n");
+      setStreamingOp({ stackName: deployName, action: 'up' });
     } catch (err) {
       setActionResult({ ok: false, msg: err.message });
+      setTimeout(() => setActionResult(null), 3000);
     }
     setDeploying(false);
-    setTimeout(() => setActionResult(null), 3000);
   };
 
   const handleCancelCreate = () => {
     setCreating(false);
+    setEditing(null);
     setNewStackName("");
     setNewStackYaml("services:\n  app:\n    image: nginx:alpine\n    ports:\n      - \"8080:80\"\n    restart: unless-stopped\n");
   };
@@ -346,6 +383,18 @@ export default function DashboardLayout() {
 
       {shellOpen && selectedContainer && selectedContainer.status === "running" && (
         <ShellTerminal container={selectedContainer} onClose={() => setShellOpen(false)} />
+      )}
+
+      {streamingOp && (
+        <StreamTerminal
+          stackName={streamingOp.stackName}
+          action={streamingOp.action}
+          onClose={() => setStreamingOp(null)}
+          onComplete={(ok) => {
+            refreshStacks();
+            if (!ok) setActionResult({ ok: false, msg: `Stack ${streamingOp.action} failed` });
+          }}
+        />
       )}
 
       {confirmAction && (
@@ -420,9 +469,10 @@ export default function DashboardLayout() {
                 onStackNameChange={setNewStackName}
                 yaml={newStackYaml}
                 onYamlChange={setNewStackYaml}
-                onDeploy={handleDeploy}
+                onDeploy={editing ? handleSaveStack : handleDeploy}
                 onCancel={handleCancelCreate}
                 deploying={deploying}
+                editMode={!!editing}
               />
             ) : (
               <StacksPanel
@@ -432,6 +482,8 @@ export default function DashboardLayout() {
                 selectedContainerId={selectedContainer?.id}
                 onSelectContainer={handleSelectContainer}
                 onStackAction={handleStackAction}
+                onStackEdit={handleStackEdit}
+                activeStreamingStack={streamingOp?.stackName || null}
               />
             )
           )}

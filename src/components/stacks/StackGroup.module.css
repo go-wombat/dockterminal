@@ -1,6 +1,6 @@
 .header {
   display: grid;
-  grid-template-columns: 20px 1fr 140px 80px 140px 100px 70px;
+  grid-template-columns: 20px 1fr 140px 80px auto;
   gap: 8px;
   padding: 10px 12px;
   cursor: pointer;

@@ -10,7 +10,10 @@ import {
   execInContainer,
   containerAction,
   stackAction,
+  streamStackAction,
   createStack,
+  getStackFile,
+  updateStackFile,
   restartAllStacks,
   pullAllImages,
   dockerPrune,
@@ -58,6 +61,26 @@ router.post('/api/container/:id/action', (req, res) => {
   const { id } = req.params;
   if (!validateId(id)) return res.status(400).json({ error: 'Invalid container ID' });
   res.json(containerAction(id, req.body.action));
+});
+
+// Stack file read/update
+router.get('/api/stack/:name/file', (req, res) => {
+  const { name } = req.params;
+  res.json(getStackFile(name));
+});
+
+router.put('/api/stack/:name/file', (req, res) => {
+  const { name } = req.params;
+  res.json(updateStackFile(name, req.body.yaml));
+});
+
+// Stack streaming (SSE)
+router.get('/api/stack/:name/stream', (req, res) => {
+  const { name } = req.params;
+  const action = req.query.action;
+  const err = streamStackAction(name, action, res);
+  if (err) return res.json(err);
+  // SSE is streaming — no res.json()
 });
 
 // Stack actions
