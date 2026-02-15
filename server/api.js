@@ -285,19 +285,36 @@ let stacksCache = null;
 let stacksCacheTs = 0;
 const STACKS_CACHE_TTL = 2000;
 
-export function getStacks() {
+function spawnAsync(bin, args, timeout = 10000) {
+  return new Promise((resolve) => {
+    const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let out = '';
+    proc.stdout.on('data', (d) => { out += d; });
+    proc.stderr.on('data', (d) => { out += d; });
+    const timer = setTimeout(() => { proc.kill('SIGTERM'); resolve(''); }, timeout);
+    proc.on('close', () => { clearTimeout(timer); resolve(out.trim()); });
+    proc.on('error', () => { clearTimeout(timer); resolve(''); });
+  });
+}
+
+export async function getStacks() {
   const now = Date.now();
   if (stacksCache && now - stacksCacheTs < STACKS_CACHE_TTL) {
     return stacksCache;
   }
 
-  // 1. Get compose projects
-  const composeLsRaw = runArgs('docker', ['compose', 'ls', '-a', '--format', 'json'], 5000);
+  // Run all three docker commands in parallel
+  const [composeLsRaw, psRaw, statsRaw] = await Promise.all([
+    spawnAsync('docker', ['compose', 'ls', '-a', '--format', 'json'], 5000),
+    spawnAsync('docker', ['ps', '-a', '--format', '{{json .}}'], 5000),
+    spawnAsync('docker', ['stats', '--no-stream', '--format', '{{json .}}'], 10000),
+  ]);
+
   let projects = [];
-  if (composeLsRaw === null) {
+  if (!composeLsRaw) {
     // Check if Docker daemon is available at all
-    const ping = runArgs('docker', ['info'], 3000);
-    if (ping === null) {
+    const ping = await spawnAsync('docker', ['info'], 3000);
+    if (!ping) {
       return { stacks: [], ts: Date.now(), error: 'Docker daemon not available' };
     }
   } else {
@@ -311,8 +328,6 @@ export function getStacks() {
     }
   }
 
-  // 2. Get all containers
-  const psRaw = runArgs('docker', ['ps', '-a', '--format', '{{json .}}'], 5000);
   let containers = [];
   if (psRaw) {
     containers = psRaw.split('\n').filter(Boolean).map(line => {
@@ -320,8 +335,6 @@ export function getStacks() {
     }).filter(Boolean);
   }
 
-  // 3. Get live stats for running containers
-  const statsRaw = runArgs('docker', ['stats', '--no-stream', '--format', '{{json .}}'], 10000);
   const statsMap = {};
   if (statsRaw) {
     statsRaw.split('\n').filter(Boolean).forEach(line => {
@@ -526,6 +539,10 @@ export function getContainerInspect(containerId) {
 export function getContainerLogs(containerId, tail = 100) {
   if (!validateId(containerId)) return { logs: [] };
 
+  // Resolve container name for source column
+  const nameRaw = runArgs('docker', ['inspect', '--format', '{{.Name}}', containerId], 3000);
+  const source = nameRaw ? nameRaw.replace(/^\//, '') : containerId.slice(0, 8);
+
   // Use spawnSync to capture both stdout and stderr (docker sends logs to both)
   let raw;
   try {
@@ -562,9 +579,81 @@ export function getContainerLogs(containerId, tail = 100) {
     if (/error|fatal|panic|exception|failed/i.test(lower)) level = 'ERR';
     else if (/warn|warning/i.test(lower)) level = 'WARN';
 
-    return { time, level, source: containerId.slice(0, 8), msg };
+    return { time, level, source, msg };
   });
 
+  return { logs };
+}
+
+// --- Aggregated logs (all running containers) ---
+
+function spawnLogsAsync(containerId) {
+  return new Promise((resolve) => {
+    const proc = spawn('docker', ['logs', '--tail', '20', '--timestamps', containerId], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let out = '';
+    proc.stdout.on('data', (d) => { out += d; });
+    proc.stderr.on('data', (d) => { out += d; });
+    const timer = setTimeout(() => { proc.kill('SIGTERM'); resolve(''); }, 5000);
+    proc.on('close', () => { clearTimeout(timer); resolve(out); });
+    proc.on('error', () => { clearTimeout(timer); resolve(''); });
+  });
+}
+
+function parseLogLines(raw, containerName) {
+  const entries = [];
+  for (const line of raw.split('\n')) {
+    if (!line) continue;
+    const tsMatch = line.match(/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\s*(.*)/);
+    let time, msg, sortTs;
+    if (tsMatch) {
+      try {
+        const d = new Date(tsMatch[1]);
+        time = d.toLocaleTimeString('en-GB', { hour12: false });
+        sortTs = d.getTime();
+      } catch {
+        time = tsMatch[1].slice(11, 19);
+        sortTs = 0;
+      }
+      msg = tsMatch[2];
+    } else {
+      time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+      sortTs = 0;
+      msg = line;
+    }
+
+    let level = 'INFO';
+    const lower = msg.toLowerCase();
+    if (/error|fatal|panic|exception|failed/i.test(lower)) level = 'ERR';
+    else if (/warn|warning/i.test(lower)) level = 'WARN';
+
+    entries.push({ time, level, source: containerName, msg, _ts: sortTs });
+  }
+  return entries;
+}
+
+export async function getAllContainerLogs() {
+  const psRaw = runArgs('docker', ['ps', '--format', '{{.ID}} {{.Names}}'], 3000);
+  if (!psRaw) return { logs: [] };
+
+  const containers = psRaw.split('\n').filter(Boolean).slice(0, 20).map(line => {
+    const [id, ...rest] = line.split(' ');
+    return { id, name: rest.join(' ') };
+  });
+
+  const results = await Promise.all(
+    containers.map(async (c) => {
+      const raw = await spawnLogsAsync(c.id);
+      return parseLogLines(raw.trim(), c.name);
+    })
+  );
+
+  let allLogs = results.flat();
+  allLogs.sort((a, b) => b._ts - a._ts);
+  allLogs = allLogs.slice(0, 200);
+
+  const logs = allLogs.map(({ _ts, ...rest }) => rest);
   return { logs };
 }
 

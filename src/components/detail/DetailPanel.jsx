@@ -96,7 +96,7 @@ export default function DetailPanel({ container, containerDetail, detailLoading,
               {infoRows.map(([k, v]) => (
                 <div key={k} className={styles.infoRow}>
                   <span style={{ color: "#007a22" }}>{k}</span>
-                  <span style={{
+                  <span title={v} style={{
                     color: (k === "STATUS" && v === "EXITED") || (k === "HEALTH" && (v === "FAULT" || v === "unhealthy")) ? "#ff3333" : "#00ff41",
                     fontWeight: k === "STATUS" || k === "HEALTH" ? 700 : 400,
                   }}>{v}</span>
@@ -141,7 +141,7 @@ export default function DetailPanel({ container, containerDetail, detailLoading,
                         if (next.has(k)) next.delete(k); else next.add(k);
                         return next;
                       }) : undefined}
-                      title={sensitive ? (masked ? "Click to reveal" : "Click to hide") : undefined}
+                      title={sensitive ? (masked ? "Click to reveal" : "Click to hide") : v}
                     >
                       {masked ? "••••••••" : v}
                     </span>

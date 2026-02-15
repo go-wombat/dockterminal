@@ -5,6 +5,7 @@ import {
   getDockerStats,
   getStacks,
   getDockerEvents,
+  getAllContainerLogs,
   getContainerInspect,
   getContainerLogs,
   execInContainer,
@@ -33,8 +34,9 @@ router.get('/api/system-stats', (_req, res) => res.json(getSystemStats()));
 router.get('/api/docker-stats', (_req, res) => res.json(getDockerStats()));
 
 // Stacks & events
-router.get('/api/stacks', (_req, res) => res.json(getStacks()));
+router.get('/api/stacks', async (_req, res) => res.json(await getStacks()));
 router.get('/api/events', (_req, res) => res.json(getDockerEvents()));
+router.get('/api/logs', async (_req, res) => res.json(await getAllContainerLogs()));
 
 // Container endpoints
 router.get('/api/container/:id/inspect', (req, res) => {

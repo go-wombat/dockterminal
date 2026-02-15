@@ -6,6 +6,7 @@ import {
   getDockerStats,
   getStacks,
   getDockerEvents,
+  getAllContainerLogs,
   getContainerInspect,
   getContainerLogs,
   execInContainer,
@@ -49,10 +50,13 @@ function systemInfoPlugin() {
       server.middlewares.use('/api/docker-stats', (_req, res) => json(res, getDockerStats()));
 
       // New: stacks
-      server.middlewares.use('/api/stacks', (_req, res) => json(res, getStacks()));
+      server.middlewares.use('/api/stacks', async (_req, res) => json(res, await getStacks()));
 
       // New: events
       server.middlewares.use('/api/events', (_req, res) => json(res, getDockerEvents()));
+
+      // Aggregated container logs
+      server.middlewares.use('/api/logs', async (_req, res) => json(res, await getAllContainerLogs()));
 
       // New: container endpoints (need URL parsing)
       server.middlewares.use(async (req, res, next) => {

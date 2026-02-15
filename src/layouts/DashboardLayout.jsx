@@ -63,7 +63,7 @@ export default function DashboardLayout() {
   const systemStats = useSystemStats(3000);
   const { stacks, containers, refresh: refreshStacks } = useDockerStacks(3000);
   const { detail: containerDetail, loading: detailLoading } = useContainerDetail(selectedContainer?.id);
-  const { logs } = useContainerLogs(null, 5000);
+  const { logs } = useContainerLogs(selectedContainer?.id, 5000, activeTab === "LOGS");
   const [bootDone, setBootDone] = useState(false);
   const [bootStage, setBootStage] = useState(0);
   const [confirmAction, setConfirmAction] = useState(null);
@@ -115,13 +115,15 @@ export default function DashboardLayout() {
     setTimeout(advance, 300);
   }, []);
 
-  // Derived values (managed-only for header counters)
-  const managedContainers = containers.filter(c => c.managed);
-  const managedStacks = stacks.filter(s => s.managed);
-  const runningCount = managedContainers.filter(c => c.status === "running").length;
-  const faultCount = managedContainers.filter(c => c.status !== "running").length;
-  const stacksRunning = managedStacks.filter(s => s.status === "running").length;
-  const stacksDegraded = managedStacks.filter(s => s.status === "partial").length;
+  // Derived values for header counters (all stacks/containers)
+  // Containers in intentionally-stopped external stacks are not faults
+  const stoppedExternalIds = new Set(
+    stacks.filter(s => s.status === "stopped" && !s.managed).flatMap(s => s.containers.map(c => c.id))
+  );
+  const runningCount = containers.filter(c => c.status === "running").length;
+  const faultCount = containers.filter(c => c.status !== "running" && !stoppedExternalIds.has(c.id)).length;
+  const stacksRunning = stacks.filter(s => s.status === "running").length;
+  const stacksDegraded = stacks.filter(s => s.status === "partial").length;
 
   const analysis = useMemo(() => generateAnalysis(containers), [containers]);
 
@@ -438,7 +440,7 @@ export default function DashboardLayout() {
       />
 
       <StatsBar
-        stackCount={managedStacks.length}
+        stackCount={stacks.length}
         stacksRunning={stacksRunning}
         stacksDegraded={stacksDegraded}
         cpuPercent={systemStats.cpuPercent}
