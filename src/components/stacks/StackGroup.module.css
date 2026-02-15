@@ -1,0 +1,40 @@
+.header {
+  display: grid;
+  grid-template-columns: 20px 1fr 140px 80px 140px 100px 70px;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+  border-top: 1px solid rgba(0, 77, 20, 0.4);
+  align-items: center;
+  font-size: 14px;
+  transition: background 0.15s;
+  background: rgba(0, 255, 65, 0.03);
+}
+
+.header > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.header:hover {
+  background: rgba(0, 255, 65, 0.06) !important;
+}
+
+.headerPartial {
+  composes: header;
+  background: rgba(255, 170, 0, 0.04);
+}
+
+.columnHeaders {
+  display: grid;
+  grid-template-columns: 20px 1fr 140px 80px 140px 100px 70px;
+  gap: 8px;
+  padding: 4px 12px 4px 32px;
+  font-size: 9px;
+  color: var(--color-border);
+  letter-spacing: 1.5px;
+  border-bottom: 1px solid rgba(0, 77, 20, 0.3);
+  background: rgba(0, 255, 65, 0.015);
+}

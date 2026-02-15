@@ -1,0 +1,14 @@
+.statusBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--color-border);
+  padding: 4px 24px;
+  font-size: 10px;
+  color: var(--color-muted);
+  background: var(--color-bg);
+  display: flex;
+  justify-content: space-between;
+  z-index: 999;
+}

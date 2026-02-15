@@ -1,0 +1,13 @@
+services:
+  vaultdock:
+    image: vaultdock:latest
+    build: .
+    container_name: vaultdock
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/stacks:/opt/stacks
+    environment:
+      - VAULTDOCK_STACKS_DIR=/opt/stacks

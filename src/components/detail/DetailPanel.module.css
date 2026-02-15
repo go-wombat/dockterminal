@@ -1,0 +1,147 @@
+.panel {
+  width: 320px;
+  overflow: auto;
+  background: rgba(0, 255, 65, 0.01);
+}
+
+.empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.emptyIcon {
+  color: var(--color-border);
+  font-size: 32px;
+}
+
+.emptyText {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  flex: 1;
+  padding: 8px 0;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+
+.content {
+  padding: 12px 16px;
+}
+
+.containerName {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  text-shadow: var(--glow-primary-soft);
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0, 77, 20, 0.3);
+  gap: 12px;
+}
+
+.infoRow > span:first-child {
+  flex-shrink: 0;
+}
+
+.infoRow > span:last-child {
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.errorBox {
+  margin-top: 16px;
+  border: 1px solid var(--color-danger);
+  padding: 12px;
+  background: rgba(255, 51, 51, 0.05);
+}
+
+.errorTitle {
+  font-size: 10px;
+  color: var(--color-danger);
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+.errorText {
+  font-size: 11px;
+  color: var(--color-danger-light);
+  line-height: 1.6;
+}
+
+.envRow {
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0, 77, 20, 0.3);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.envRow > span:first-child {
+  flex-shrink: 0;
+}
+
+.envRow > span:last-child {
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.volumeRow {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0, 77, 20, 0.3);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 20px;
+}
+
+.shellBtn {
+  padding: 10px 12px;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-align: center;
+  background: rgba(0, 255, 65, 0.05);
+  transition: all 0.2s;
+  font-weight: 700;
+}
+
+.actionGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.actionBtn {
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-align: center;
+  transition: all 0.2s;
+}

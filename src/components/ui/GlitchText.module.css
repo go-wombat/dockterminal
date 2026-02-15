@@ -1,0 +1,4 @@
+.glitch {
+  display: inline-block;
+  transition: opacity 0.08s;
+}

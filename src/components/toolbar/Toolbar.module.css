@@ -1,0 +1,78 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(0, 255, 65, 0.015);
+}
+
+.btn {
+  padding: 5px 14px;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted-dim);
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  font-weight: 400;
+  background: transparent;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.btn:hover {
+  background: rgba(0, 255, 65, 0.08);
+  border-color: var(--color-primary);
+}
+
+.btnPrimary {
+  composes: btn;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 700;
+  background: rgba(0, 255, 65, 0.05);
+}
+
+.btnDanger {
+  composes: btn;
+  border-color: rgba(255, 51, 51, 0.4);
+  color: var(--color-danger-light);
+}
+
+.btnDanger:hover {
+  background: rgba(255, 51, 51, 0.08);
+  border-color: var(--color-danger);
+}
+
+.searchBox {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  padding: 3px 8px;
+  background: rgba(0, 255, 65, 0.02);
+  min-width: 180px;
+}
+
+.searchIcon {
+  color: var(--color-muted);
+  font-size: 11px;
+  margin-right: 6px;
+}
+
+.searchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-primary);
+  font-family: inherit;
+  font-size: 11px;
+  caret-color: var(--color-primary);
+}
+
+.searchClear {
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 11px;
+}

@@ -1,0 +1,50 @@
+.header {
+  border-bottom: 1px solid var(--color-primary);
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 255, 65, 0.03);
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.version {
+  color: var(--color-muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.right {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.nodeName {
+  color: var(--color-muted-dim);
+}
+
+.separator {
+  color: var(--color-muted-dim);
+}
+
+.fault {
+  color: var(--color-danger);
+  margin-left: 12px;
+  animation: pulse 1.5s infinite;
+}
+
+.degraded {
+  color: var(--color-warning);
+  margin-left: 12px;
+}
+
+.clock {
+  color: var(--color-primary-dim);
+}

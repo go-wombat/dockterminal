@@ -1,0 +1,31 @@
+.bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-border);
+}
+
+.cell {
+  padding: 10px 20px;
+  background: var(--color-bg);
+  text-align: center;
+}
+
+.label {
+  font-size: 10px;
+  color: var(--color-muted);
+  letter-spacing: 2px;
+  margin-bottom: 2px;
+}
+
+.value {
+  font-size: 20px;
+  font-weight: 700;
+  text-shadow: var(--glow-primary-soft);
+}
+
+.sub {
+  font-size: 10px;
+  color: var(--color-muted-dim);
+}

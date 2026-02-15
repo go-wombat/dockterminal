@@ -1,0 +1,77 @@
+:root {
+  --color-primary: #00ff41;
+  --color-primary-dim: #00cc38;
+  --color-primary-bright: #00ff41;
+  --color-bg: #0a0f0a;
+  --color-bg-elevated: #080c08;
+  --color-muted: #007a22;
+  --color-muted-dim: #00aa30;
+  --color-border: #004d14;
+  --color-warning: #ffaa00;
+  --color-warning-light: #ffcc44;
+  --color-danger: #ff3333;
+  --color-danger-light: #ff6666;
+  --color-info: #4488ff;
+  --color-text: #00ff41;
+  --color-text-secondary: #00cc38;
+  --color-text-muted: #007a22;
+
+  --font-mono: 'Share Tech Mono', monospace;
+  --glow-primary: 0 0 10px rgba(0, 255, 65, 0.5);
+  --glow-primary-soft: 0 0 8px rgba(0, 255, 65, 0.4);
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) var(--color-bg);
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-mono);
+  background: var(--color-bg);
+  color: var(--color-text);
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+}

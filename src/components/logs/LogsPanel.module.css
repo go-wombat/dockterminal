@@ -1,0 +1,104 @@
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.filterBar {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.filterLabel {
+  font-size: 10px;
+  color: var(--color-muted);
+  letter-spacing: 1.5px;
+  margin-right: 4px;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  padding: 4px 8px;
+  flex: 1;
+  max-width: 350px;
+  background: rgba(0, 255, 65, 0.02);
+}
+
+.searchPrompt {
+  color: var(--color-muted);
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+.searchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-primary);
+  font-family: inherit;
+  font-size: 12px;
+  caret-color: var(--color-primary);
+}
+
+.clearBtn {
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.levelToggles {
+  display: flex;
+  gap: 4px;
+}
+
+.levelToggle {
+  padding: 4px 12px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.counter {
+  font-size: 10px;
+  color: var(--color-muted);
+  margin-left: auto;
+}
+
+.entries {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 12px;
+}
+
+.empty {
+  color: var(--color-muted);
+  font-size: 12px;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.logLine {
+  font-size: 12px;
+  padding: 3px 0;
+  display: flex;
+  gap: 8px;
+}
+
+.logTime {
+  color: var(--color-muted);
+  min-width: 65px;
+}
+
+.logSource {
+  color: var(--color-primary-dim);
+  min-width: 130px;
+}

@@ -1,0 +1,22 @@
+.container {
+  background: var(--color-bg);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.content {
+  color: var(--color-primary);
+  font-size: 14px;
+  line-height: 2.2;
+}
+
+.line {
+  opacity: 0.9;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
+}
+
+.cursor {
+  animation: blink 0.8s infinite;
+}
