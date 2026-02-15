@@ -2,7 +2,7 @@ import CRTOverlay from '../ui/CRTOverlay';
 import styles from './BootScreen.module.css';
 
 const BOOT_LINES = [
-  "ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL",
+  "DOCKTERMINAL (TM) TERMLINK PROTOCOL",
   "DOCKER ENGINE v27.4.1 ... [OK]",
   "LOADING STACK MANIFESTS ... [OK]",
   "AI DIAGNOSTIC MODULE v0.3.1 ... [OK]",

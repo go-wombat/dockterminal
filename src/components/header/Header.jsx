@@ -6,7 +6,7 @@ export default function Header({ runningCount = 0, faultCount = 0, stacksDegrade
     <header className={styles.header}>
       <div className={styles.left}>
         <GlitchText style={{ fontSize: 20, fontWeight: 700, textShadow: '0 0 10px rgba(0,255,65,0.5)', letterSpacing: 2 }}>
-          ⬡ DOCKYARD
+          ⬡ DOCKTERMINAL
         </GlitchText>
         <span className={styles.version}>v0.1.0-alpha</span>
       </div>

@@ -9,14 +9,14 @@ npm run dev      # Start Vite dev server (includes backend API via middleware)
 npm run build    # Production build to /dist
 npm run preview  # Preview production build
 
-VAULTDOCK_STACKS_DIR=~/my-stacks npm run dev  # Custom stacks directory (default: ~/stacks)
+DOCKTERMINAL_STACKS_DIR=~/my-stacks npm run dev  # Custom stacks directory (default: ~/stacks)
 ```
 
 No test runner or linter is configured.
 
 ## Architecture
 
-Vaultdock is a retro CRT-styled Docker management dashboard. It's a React 19 SPA with **no separate backend** — all API endpoints run as Vite middleware in `vite.config.js`.
+DockTerminal is a retro CRT-styled Docker management dashboard. It's a React 19 SPA with **no separate backend** — all API endpoints run as Vite middleware in `vite.config.js`.
 
 ### Data flow
 
@@ -42,7 +42,7 @@ Container IDs in URL params are short hex IDs (12 chars from `docker ps`).
 
 #### Managed vs Unmanaged Stacks
 
-- **Managed** = subdirectory in `STACKS_DIR` (`VAULTDOCK_STACKS_DIR` env var, default `~/stacks`) with a compose file → shows action buttons, appears even when not running (status `created`)
+- **Managed** = subdirectory in `STACKS_DIR` (`DOCKTERMINAL_STACKS_DIR` env var, default `~/stacks`) with a compose file → shows action buttons, appears even when not running (status `created`)
 - **Unmanaged** = external compose projects detected by `docker compose ls` → read-only, no action buttons
 - **Standalone** = containers not in any compose project, grouped under "standalone"
 - Sorting: managed first, then unmanaged alphabetically, standalone last

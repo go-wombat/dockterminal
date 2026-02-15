@@ -1,8 +1,8 @@
 services:
-  vaultdock:
-    image: vaultdock:latest
+  dockterminal:
+    image: dockterminal:latest
     build: .
-    container_name: vaultdock
+    container_name: dockterminal
     restart: unless-stopped
     ports:
       - "5001:5001"
@@ -10,4 +10,4 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /opt/stacks:/opt/stacks
     environment:
-      - VAULTDOCK_STACKS_DIR=/opt/stacks
+      - DOCKTERMINAL_STACKS_DIR=/opt/stacks

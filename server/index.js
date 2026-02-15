@@ -5,7 +5,7 @@ import router from './routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.join(__dirname, '..', 'dist');
-const port = parseInt(process.env.VAULTDOCK_PORT || '5001', 10);
+const port = parseInt(process.env.DOCKTERMINAL_PORT || '5001', 10);
 
 const app = express();
 
@@ -21,5 +21,5 @@ app.get('/{*splat}', (_req, res) => {
 });
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Vaultdock running at http://0.0.0.0:${port}`);
+  console.log(`DockTerminal running at http://0.0.0.0:${port}`);
 });

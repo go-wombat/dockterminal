@@ -7,6 +7,8 @@ const DEFAULTS = {
   totalMemMb: 0,
   usedMemMb: 0,
   loadAvg: ['0.00', '0.00', '0.00'],
+  netRxBytesPerSec: 0,
+  netTxBytesPerSec: 0,
   dockerTotal: 0,
   dockerRunning: 0,
   dockerStopped: 0,

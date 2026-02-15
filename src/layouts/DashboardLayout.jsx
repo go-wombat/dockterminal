@@ -24,6 +24,14 @@ import styles from './DashboardLayout.module.css';
 
 const TABS = ["STACKS", "LOGS", "AI AGENT"];
 
+function formatNetRate(bytesPerSec) {
+  if (!bytesPerSec || bytesPerSec < 1) return '0 B/s';
+  if (bytesPerSec >= 1024 * 1024 * 1024) return (bytesPerSec / (1024 * 1024 * 1024)).toFixed(1) + ' GB/s';
+  if (bytesPerSec >= 1024 * 1024) return (bytesPerSec / (1024 * 1024)).toFixed(1) + ' MB/s';
+  if (bytesPerSec >= 1024) return (bytesPerSec / 1024).toFixed(0) + ' KB/s';
+  return Math.round(bytesPerSec) + ' B/s';
+}
+
 function generateAnalysis(containers) {
   const problems = containers.filter(c => c.status !== 'running');
   if (problems.length === 0) return null;
@@ -109,10 +117,11 @@ export default function DashboardLayout() {
 
   // Derived values (managed-only for header counters)
   const managedContainers = containers.filter(c => c.managed);
+  const managedStacks = stacks.filter(s => s.managed);
   const runningCount = managedContainers.filter(c => c.status === "running").length;
   const faultCount = managedContainers.filter(c => c.status !== "running").length;
-  const stacksRunning = stacks.filter(s => s.status === "running").length;
-  const stacksDegraded = stacks.filter(s => s.managed && s.status === "partial").length;
+  const stacksRunning = managedStacks.filter(s => s.status === "running").length;
+  const stacksDegraded = managedStacks.filter(s => s.status === "partial").length;
 
   const analysis = useMemo(() => generateAnalysis(containers), [containers]);
 
@@ -429,7 +438,7 @@ export default function DashboardLayout() {
       />
 
       <StatsBar
-        stackCount={stacks.length}
+        stackCount={managedStacks.length}
         stacksRunning={stacksRunning}
         stacksDegraded={stacksDegraded}
         cpuPercent={systemStats.cpuPercent}
@@ -518,7 +527,11 @@ export default function DashboardLayout() {
         />
       </div>
 
-      <StatusBar />
+      <StatusBar
+        load={systemStats.loadAvg.join(' ')}
+        netUp={formatNetRate(systemStats.netTxBytesPerSec)}
+        netDown={formatNetRate(systemStats.netRxBytesPerSec)}
+      />
     </div>
   );
 }

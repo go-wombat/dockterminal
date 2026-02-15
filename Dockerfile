@@ -30,8 +30,8 @@ RUN npm ci --omit=dev
 COPY server/ ./server/
 COPY --from=builder /app/dist ./dist/
 
-ENV VAULTDOCK_STACKS_DIR=/opt/stacks
-ENV VAULTDOCK_PORT=5001
+ENV DOCKTERMINAL_STACKS_DIR=/opt/stacks
+ENV DOCKTERMINAL_PORT=5001
 
 EXPOSE 5001
 

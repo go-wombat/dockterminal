@@ -3,7 +3,7 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 
-export const STACKS_DIR = process.env.VAULTDOCK_STACKS_DIR || path.join(os.homedir(), 'stacks');
+export const STACKS_DIR = process.env.DOCKTERMINAL_STACKS_DIR || path.join(os.homedir(), 'stacks');
 
 // Shell-based runner for system commands that need piping/quoting (non-docker)
 export const run = (cmd, timeout = 3000) => {
@@ -56,9 +56,61 @@ export function getSystemInfo() {
   };
 }
 
-// --- Dynamic stats (CPU + Memory, polled) ---
+// --- Dynamic stats (CPU + Memory + Network, polled) ---
 
 let prevCpuTimes = null;
+let prevNetBytes = null;
+let prevNetTime = null;
+let cachedPhysicalCores = null;
+
+function getNetBytes() {
+  const platform = os.platform();
+  let rx = 0, tx = 0;
+
+  if (platform === 'linux') {
+    try {
+      const data = fs.readFileSync('/proc/net/dev', 'utf8');
+      for (const line of data.split('\n')) {
+        const match = line.match(/^\s*([^:]+):\s*(.*)/);
+        if (!match || match[1].trim() === 'lo') continue;
+        const cols = match[2].trim().split(/\s+/);
+        if (cols.length >= 9) {
+          rx += parseInt(cols[0], 10) || 0;
+          tx += parseInt(cols[8], 10) || 0;
+        }
+      }
+    } catch {}
+  } else if (platform === 'darwin') {
+    try {
+      const output = run('netstat -ib', 5000);
+      if (output) {
+        const lines = output.split('\n');
+        // Find column indices from header
+        const header = lines[0];
+        const cols = header.split(/\s+/);
+        const ibyIdx = cols.indexOf('Ibytes');
+        const obyIdx = cols.indexOf('Obytes');
+        if (ibyIdx >= 0 && obyIdx >= 0) {
+          const seen = new Set();
+          for (let i = 1; i < lines.length; i++) {
+            const parts = lines[i].split(/\s+/);
+            const name = parts[0]?.replace(/\*$/, '');
+            if (!name || name.startsWith('lo') || seen.has(name)) continue;
+            seen.add(name);
+            const iby = parseInt(parts[ibyIdx], 10);
+            const oby = parseInt(parts[obyIdx], 10);
+            if (!isNaN(iby) && !isNaN(oby)) {
+              rx += iby;
+              tx += oby;
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return { rx, tx };
+}
 
 function sampleCpuTimes() {
   const cpus = os.cpus();
@@ -94,21 +146,39 @@ export function getSystemStats() {
   const cpus = os.cpus();
   const logicalCores = cpus.length;
 
-  // Physical cores
-  let physicalCores = logicalCores;
-  const platform = os.platform();
-  if (platform === 'darwin') {
-    const val = run('sysctl -n hw.physicalcpu');
-    if (val) physicalCores = parseInt(val, 10);
-  } else if (platform === 'linux') {
-    const val = run('lscpu -p=CORE | grep -v "^#" | sort -u | wc -l');
-    if (val) physicalCores = parseInt(val, 10);
+  // Physical cores (cached — never changes at runtime)
+  if (cachedPhysicalCores === null) {
+    cachedPhysicalCores = logicalCores;
+    const platform = os.platform();
+    if (platform === 'darwin') {
+      const val = run('sysctl -n hw.physicalcpu');
+      if (val) cachedPhysicalCores = parseInt(val, 10);
+    } else if (platform === 'linux') {
+      const val = run('lscpu -p=CORE | grep -v "^#" | sort -u | wc -l');
+      if (val) cachedPhysicalCores = parseInt(val, 10);
+    }
   }
+  const physicalCores = cachedPhysicalCores;
 
   const totalMemMb = Math.round(os.totalmem() / 1024 / 1024);
   const freeMemMb = Math.round(os.freemem() / 1024 / 1024);
   const usedMemMb = totalMemMb - freeMemMb;
   const cpuPercent = getCpuPercent();
+
+  // Network throughput (delta between polls)
+  let netRxBytesPerSec = 0;
+  let netTxBytesPerSec = 0;
+  const net = getNetBytes();
+  const netNow = Date.now();
+  if (prevNetBytes && prevNetTime) {
+    const dtSec = (netNow - prevNetTime) / 1000;
+    if (dtSec > 0) {
+      netRxBytesPerSec = Math.max(0, (net.rx - prevNetBytes.rx) / dtSec);
+      netTxBytesPerSec = Math.max(0, (net.tx - prevNetBytes.tx) / dtSec);
+    }
+  }
+  prevNetBytes = net;
+  prevNetTime = netNow;
 
   return {
     cpuPercent: Math.round(cpuPercent * 10) / 10,
@@ -117,6 +187,8 @@ export function getSystemStats() {
     totalMemMb,
     usedMemMb,
     loadAvg: os.loadavg().map(v => v.toFixed(2)),
+    netRxBytesPerSec: Math.round(netRxBytesPerSec),
+    netTxBytesPerSec: Math.round(netTxBytesPerSec),
   };
 }
 
@@ -220,7 +292,7 @@ export function getStacks() {
   }
 
   // 1. Get compose projects
-  const composeLsRaw = runArgs('docker', ['compose', 'ls', '--format', 'json'], 5000);
+  const composeLsRaw = runArgs('docker', ['compose', 'ls', '-a', '--format', 'json'], 5000);
   let projects = [];
   if (composeLsRaw === null) {
     // Check if Docker daemon is available at all

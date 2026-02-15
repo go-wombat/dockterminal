@@ -30,7 +30,6 @@ export default function StackGroup({ stack, index, expanded, onToggle, selectedC
           {!isManaged && <span style={{ color: "#005522", fontWeight: 400, fontSize: 9, marginLeft: 6 }}>[EXTERNAL]</span>}
           <span style={{ color: "#007a22", fontWeight: 400, fontSize: 11, marginLeft: 8 }}>{running}/{total}</span>
         </span>
-        <span style={{ color: "#007a22", fontSize: 11 }}>{stack.path}</span>
         <span style={{ color: statusColor, fontSize: 11, textTransform: "uppercase" }}>{stack.status === "partial" ? "DEGRADED" : stack.status}</span>
         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
           {showActions && isUp && (
