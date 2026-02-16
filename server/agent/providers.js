@@ -34,7 +34,7 @@ class OpenAIAdapter {
   buildInitialMessages(systemPrompt, userPrompt) {
     this.instructions = systemPrompt;
     this.input = [
-      { role: 'user', content: userPrompt, type: 'message' },
+      { role: 'user', content: userPrompt },
     ];
   }
 
