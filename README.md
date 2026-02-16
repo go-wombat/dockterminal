@@ -161,6 +161,20 @@ The shell terminal blocks a set of known dangerous commands (`rm -rf /`, `shutdo
 
 ---
 
+## Contributing
+
+Found a bug or have an idea? [Open an issue](../../issues) — we read them all.
+
+Pull requests are welcome. Keep it simple, keep it focused.
+
+---
+
+## Who made this
+
+DockTerminal is built and used internally by [Go Wombat](https://gowombat.team).
+
+---
+
 ## License
 
 MIT
