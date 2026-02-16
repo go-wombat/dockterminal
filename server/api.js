@@ -539,9 +539,17 @@ export function getContainerInspect(containerId) {
 export function getContainerLogs(containerId, tail = 100) {
   if (!validateId(containerId)) return { logs: [] };
 
-  // Resolve container name for source column
-  const nameRaw = runArgs('docker', ['inspect', '--format', '{{.Name}}', containerId], 3000);
-  const source = nameRaw ? nameRaw.replace(/^\//, '') : containerId.slice(0, 8);
+  // Resolve container name + compose project for source column
+  const fmt = '{{.Name}}|{{index .Config.Labels "com.docker.compose.project"}}';
+  const inspectRaw = runArgs('docker', ['inspect', '--format', fmt, containerId], 3000);
+  let source;
+  if (inspectRaw) {
+    const [rawName, project] = inspectRaw.split('|');
+    const name = rawName ? rawName.replace(/^\//, '') : containerId.slice(0, 8);
+    source = project ? `${project}/${name}` : name;
+  } else {
+    source = containerId.slice(0, 8);
+  }
 
   // Use spawnSync to capture both stdout and stderr (docker sends logs to both)
   let raw;
@@ -582,7 +590,7 @@ export function getContainerLogs(containerId, tail = 100) {
     return { time, level, source, msg };
   });
 
-  return { logs };
+  return { logs: logs.reverse() };
 }
 
 // --- Aggregated logs (all running containers) ---
@@ -634,18 +642,21 @@ function parseLogLines(raw, containerName) {
 }
 
 export async function getAllContainerLogs() {
-  const psRaw = runArgs('docker', ['ps', '--format', '{{.ID}} {{.Names}}'], 3000);
+  const psRaw = runArgs('docker', ['ps', '--format', '{{.ID}}|{{.Names}}|{{.Label "com.docker.compose.project"}}'], 3000);
   if (!psRaw) return { logs: [] };
 
+  const managedNames = scanManagedStacks();
+
   const containers = psRaw.split('\n').filter(Boolean).slice(0, 20).map(line => {
-    const [id, ...rest] = line.split(' ');
-    return { id, name: rest.join(' ') };
-  });
+    const [id, name, project] = line.split('|');
+    const source = project ? `${project}/${name}` : name;
+    return { id, source, project };
+  }).filter(c => c.project && managedNames.has(c.project));
 
   const results = await Promise.all(
     containers.map(async (c) => {
       const raw = await spawnLogsAsync(c.id);
-      return parseLogLines(raw.trim(), c.name);
+      return parseLogLines(raw.trim(), c.source);
     })
   );
 

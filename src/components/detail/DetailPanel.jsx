@@ -57,7 +57,7 @@ export default function DetailPanel({ container, containerDetail, detailLoading,
       <div style={{ animation: "fadeIn 0.2s ease" }}>
         {/* Tabs */}
         <div className={styles.tabs}>
-          {["INFO", "ENV", "VOLUMES"].map(tab => (
+          {(container.managed === false ? ["INFO", "VOLUMES"] : ["INFO", "ENV", "VOLUMES"]).map(tab => (
             <div
               key={tab}
               onClick={() => onRightTabChange(tab)}
