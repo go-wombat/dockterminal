@@ -32,27 +32,6 @@ function formatNetRate(bytesPerSec) {
   return Math.round(bytesPerSec) + ' B/s';
 }
 
-function generateAnalysis(containers) {
-  const problems = containers.filter(c => c.status !== 'running');
-  if (problems.length === 0) return null;
-
-  const c = problems[0];
-  return {
-    title: "CONTAINER FAILURE ANALYSIS",
-    container: c.name,
-    timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    diagnosis: [
-      `Container "${c.name}" is ${c.status}`,
-      c.status === 'exited' ? 'Process terminated — check exit code and logs' : `Container state: ${c.status}`,
-      `Image: ${c.image}`,
-      problems.length > 1 ? `${problems.length - 1} other container(s) also not running` : 'Only affected container in this scan',
-    ],
-    suggestion: `Inspect logs with: docker logs ${c.id} --tail 50. Consider restarting the container.`,
-    confidence: 72,
-    autofix: `docker restart ${c.id}`,
-  };
-}
-
 export default function DashboardLayout() {
   const [selectedContainer, setSelectedContainer] = useState(null);
   const [activeTab, setActiveTab] = useState("STACKS");
@@ -76,9 +55,11 @@ export default function DashboardLayout() {
   const [editing, setEditing] = useState(null); // { stackName, yaml } or null
   const [newStackName, setNewStackName] = useState("");
   const [newStackYaml, setNewStackYaml] = useState("services:\n  app:\n    image: nginx:alpine\n    ports:\n      - \"8080:80\"\n    restart: unless-stopped\n");
+  const [newStackEnv, setNewStackEnv] = useState("");
   const [stackSearch, setStackSearch] = useState("");
   const [deploying, setDeploying] = useState(false);
   const [streamingOp, setStreamingOp] = useState(null);
+  const [agentStatus, setAgentStatus] = useState(null);
 
   // Auto-expand managed non-stopped stacks when data arrives
   useEffect(() => {
@@ -126,7 +107,10 @@ export default function DashboardLayout() {
   const stacksRunning = stacks.filter(s => s.status === "running").length;
   const stacksDegraded = stacks.filter(s => s.status === "partial").length;
 
-  const analysis = useMemo(() => generateAnalysis(containers), [containers]);
+  // Fetch AI agent status once on mount
+  useEffect(() => {
+    fetch('/api/agent/status').then(r => r.json()).then(setAgentStatus).catch(() => {});
+  }, []);
 
   const filteredLogs = logs.filter(log => {
     if (!logLevels[log.level]) return false;
@@ -205,33 +189,6 @@ export default function DashboardLayout() {
     setStreamingOp({ stackName, action: action.toLowerCase() });
   };
 
-  const handleExecuteFix = (fix) => {
-    setConfirmAction({
-      action: "EXECUTE AUTOFIX",
-      container: fix.container,
-      containerId: fix.autofix.match(/[a-f0-9]{12}/)?.[0] || '',
-      danger: false,
-      customCmd: fix.autofix,
-    });
-  };
-
-  const handleExecuteAutofix = async () => {
-    if (!confirmAction?.customCmd) return;
-    try {
-      // For autofix, we just restart the container via the action API
-      const idMatch = confirmAction.customCmd.match(/[a-f0-9]{12}/);
-      if (idMatch) {
-        await fetch(`/api/container/${idMatch[0]}/action`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'restart' }),
-        });
-        refreshStacks();
-      }
-    } catch {}
-    setConfirmAction(null);
-  };
-
   // Toolbar bulk action handlers
   const handleRestartAll = () => {
     const runningStacks = stacks.filter(s => s.status !== 'stopped' && s.managed);
@@ -288,16 +245,19 @@ export default function DashboardLayout() {
   // Stack edit handlers
   const handleStackEdit = async (stackName) => {
     try {
-      const res = await fetch(`/api/stack/${stackName}/file`);
-      const data = await res.json();
-      if (data.error) {
-        setActionResult({ ok: false, msg: data.error });
+      const [fileRes, envRes] = await Promise.all([
+        fetch(`/api/stack/${stackName}/file`).then(r => r.json()),
+        fetch(`/api/stack/${stackName}/env`).then(r => r.json()),
+      ]);
+      if (fileRes.error) {
+        setActionResult({ ok: false, msg: fileRes.error });
         setTimeout(() => setActionResult(null), 3000);
         return;
       }
-      setEditing({ stackName, yaml: data.yaml });
+      setEditing({ stackName, yaml: fileRes.yaml });
       setNewStackName(stackName);
-      setNewStackYaml(data.yaml);
+      setNewStackYaml(fileRes.yaml);
+      setNewStackEnv(envRes.env || '');
       setCreating(true);
       setActiveTab("STACKS");
     } catch (err) {
@@ -313,7 +273,7 @@ export default function DashboardLayout() {
       const res = await fetch(`/api/stack/${editing.stackName}/file`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ yaml: newStackYaml }),
+        body: JSON.stringify({ yaml: newStackYaml, env: newStackEnv }),
       });
       const data = await res.json();
       if (data.error) {
@@ -327,6 +287,7 @@ export default function DashboardLayout() {
       setEditing(null);
       setNewStackName("");
       setNewStackYaml("services:\n  app:\n    image: nginx:alpine\n    ports:\n      - \"8080:80\"\n    restart: unless-stopped\n");
+      setNewStackEnv("");
       setStreamingOp({ stackName: restartName, action: 'restart' });
     } catch (err) {
       setActionResult({ ok: false, msg: err.message });
@@ -349,7 +310,7 @@ export default function DashboardLayout() {
       const res = await fetch('/api/stack/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newStackName, yaml: newStackYaml, deploy: false }),
+        body: JSON.stringify({ name: newStackName, yaml: newStackYaml, env: newStackEnv, deploy: false }),
       });
       const data = await res.json();
       if (data.error) {
@@ -363,6 +324,7 @@ export default function DashboardLayout() {
       setCreating(false);
       setNewStackName("");
       setNewStackYaml("services:\n  app:\n    image: nginx:alpine\n    ports:\n      - \"8080:80\"\n    restart: unless-stopped\n");
+      setNewStackEnv("");
       setStreamingOp({ stackName: deployName, action: 'up' });
     } catch (err) {
       setActionResult({ ok: false, msg: err.message });
@@ -376,6 +338,7 @@ export default function DashboardLayout() {
     setEditing(null);
     setNewStackName("");
     setNewStackYaml("services:\n  app:\n    image: nginx:alpine\n    ports:\n      - \"8080:80\"\n    restart: unless-stopped\n");
+    setNewStackEnv("");
   };
 
   // Stack filtering
@@ -415,7 +378,7 @@ export default function DashboardLayout() {
           container={confirmAction.container}
           danger={confirmAction.danger}
           isStack={confirmAction.isStack}
-          onExecute={confirmAction.bulkAction ? handleExecuteBulkAction : confirmAction.isStack ? handleExecuteStackAction : (confirmAction.customCmd ? handleExecuteAutofix : handleExecuteAction)}
+          onExecute={confirmAction.bulkAction ? handleExecuteBulkAction : confirmAction.isStack ? handleExecuteStackAction : handleExecuteAction}
           onCancel={() => setConfirmAction(null)}
         />
       )}
@@ -481,6 +444,8 @@ export default function DashboardLayout() {
                 onStackNameChange={setNewStackName}
                 yaml={newStackYaml}
                 onYamlChange={setNewStackYaml}
+                env={newStackEnv}
+                onEnvChange={setNewStackEnv}
                 onDeploy={editing ? handleSaveStack : handleDeploy}
                 onCancel={handleCancelCreate}
                 deploying={deploying}
@@ -513,8 +478,9 @@ export default function DashboardLayout() {
 
           {activeTab === "AI AGENT" && (
             <AIAgentPanel
-              analysis={analysis}
-              onExecuteFix={handleExecuteFix}
+              containers={containers}
+              stacks={stacks}
+              agentStatus={agentStatus}
             />
           )}
         </div>

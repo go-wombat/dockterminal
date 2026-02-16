@@ -21,6 +21,7 @@ import {
   dockerPrune,
   validateId,
 } from './server/api.js';
+import { startInvestigation, subscribeSession, getAgentStatus } from './server/agent/index.js';
 
 // --- Vite plugin ---
 
@@ -156,6 +157,27 @@ function systemInfoPlugin() {
           const name = stackActionMatch[1];
           const body = await readBody(req);
           return json(res, stackAction(name, body.action));
+        }
+
+        // --- AI Agent endpoints ---
+
+        if (url === '/api/agent/status' && req.method === 'GET') {
+          return json(res, getAgentStatus());
+        }
+
+        if (url === '/api/agent/investigate' && req.method === 'POST') {
+          const body = await readBody(req);
+          if (!body.container?.id || !body.container?.name) {
+            res.statusCode = 400;
+            return json(res, { error: 'Container id and name required' });
+          }
+          return json(res, startInvestigation(body.container, body.stackContext || null));
+        }
+
+        const agentStreamMatch = url.match(/^\/api\/agent\/stream\/([a-f0-9-]+)$/);
+        if (agentStreamMatch && req.method === 'GET') {
+          subscribeSession(agentStreamMatch[1], res);
+          return;
         }
 
         next();

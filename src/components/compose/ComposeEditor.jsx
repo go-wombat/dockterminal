@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import styles from './ComposeEditor.module.css';
 import ComposeGraph from './ComposeGraph';
 
@@ -161,16 +161,26 @@ function parseCompose(yaml) {
   return { services, networks };
 }
 
-export default function ComposeEditor({ stackName, onStackNameChange, yaml, onYamlChange, onDeploy, onCancel, deploying, editMode = false }) {
+export default function ComposeEditor({ stackName, onStackNameChange, yaml, onYamlChange, env = '', onEnvChange, onDeploy, onCancel, deploying, editMode = false }) {
+  const [activeEditorTab, setActiveEditorTab] = useState('compose');
   const editorRef = useRef(null);
   const lineNumRef = useRef(null);
+  const envEditorRef = useRef(null);
+  const envLineNumRef = useRef(null);
 
   const parsed = useMemo(() => parseCompose(yaml), [yaml]);
   const lineCount = yaml.split("\n").length;
+  const envLineCount = Math.max((env || '').split("\n").length, 1);
 
   const handleScroll = useCallback(() => {
     if (editorRef.current && lineNumRef.current) {
       lineNumRef.current.scrollTop = editorRef.current.scrollTop;
+    }
+  }, []);
+
+  const handleEnvScroll = useCallback(() => {
+    if (envEditorRef.current && envLineNumRef.current) {
+      envLineNumRef.current.scrollTop = envEditorRef.current.scrollTop;
     }
   }, []);
 
@@ -212,7 +222,7 @@ export default function ComposeEditor({ stackName, onStackNameChange, yaml, onYa
               style={editMode ? { opacity: 0.5 } : undefined}
             />
           </div>
-          {stackName && <span className={styles.pathPreview}>~/stacks/{stackName}/compose.yaml</span>}
+          {stackName && <span className={styles.pathPreview}>~/stacks/{stackName}/{activeEditorTab === 'env' ? '.env' : 'compose.yaml'}</span>}
         </div>
         <div className={styles.headerRight}>
           <button
@@ -228,28 +238,65 @@ export default function ComposeEditor({ stackName, onStackNameChange, yaml, onYa
         </div>
       </div>
 
+      {/* Tab bar */}
+      <div className={styles.tabBar}>
+        <button
+          className={activeEditorTab === 'compose' ? styles.tabActive : styles.tab}
+          onClick={() => setActiveEditorTab('compose')}
+        >COMPOSE</button>
+        <button
+          className={activeEditorTab === 'env' ? styles.tabActive : styles.tab}
+          onClick={() => setActiveEditorTab('env')}
+        >ENV</button>
+      </div>
+
       {/* Body */}
       <div className={styles.body}>
-        {/* YAML editor */}
+        {/* Editor pane */}
         <div className={styles.yamlPane}>
-          <div className={styles.yamlHeader}>compose.yaml</div>
-          <div className={styles.yamlEditor}>
-            <div className={styles.lineNumbers} ref={lineNumRef}>
-              {Array.from({ length: lineCount }, (_, i) => (
-                <div key={i} className={styles.lineNum}>{i + 1}</div>
-              ))}
-            </div>
-            <textarea
-              ref={editorRef}
-              className={styles.textarea}
-              value={yaml}
-              onChange={e => onYamlChange(e.target.value)}
-              onScroll={handleScroll}
-              onKeyDown={handleKeyDown}
-              spellCheck={false}
-              wrap="off"
-            />
-          </div>
+          {activeEditorTab === 'compose' ? (
+            <>
+              <div className={styles.yamlHeader}>compose.yaml</div>
+              <div className={styles.yamlEditor}>
+                <div className={styles.lineNumbers} ref={lineNumRef}>
+                  {Array.from({ length: lineCount }, (_, i) => (
+                    <div key={i} className={styles.lineNum}>{i + 1}</div>
+                  ))}
+                </div>
+                <textarea
+                  ref={editorRef}
+                  className={styles.textarea}
+                  value={yaml}
+                  onChange={e => onYamlChange(e.target.value)}
+                  onScroll={handleScroll}
+                  onKeyDown={handleKeyDown}
+                  spellCheck={false}
+                  wrap="off"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={styles.yamlHeader}>.env</div>
+              <div className={styles.yamlEditor}>
+                <div className={styles.lineNumbers} ref={envLineNumRef}>
+                  {Array.from({ length: envLineCount }, (_, i) => (
+                    <div key={i} className={styles.lineNum}>{i + 1}</div>
+                  ))}
+                </div>
+                <textarea
+                  ref={envEditorRef}
+                  className={styles.textarea}
+                  value={env}
+                  onChange={e => onEnvChange(e.target.value)}
+                  onScroll={handleEnvScroll}
+                  spellCheck={false}
+                  wrap="off"
+                  placeholder="KEY=value"
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Preview pane */}

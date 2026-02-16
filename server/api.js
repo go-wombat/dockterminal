@@ -1022,9 +1022,58 @@ export function updateStackFile(stackName, yaml) {
   }
 }
 
+// --- Read/update stack .env file ---
+
+export function getStackEnvFile(stackName) {
+  if (!stackName || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(stackName)) {
+    return { error: 'Invalid stack name' };
+  }
+  const managed = scanManagedStacks();
+  const composePath = managed.get(stackName);
+  if (!composePath) {
+    return { error: `Stack "${stackName}" is not a managed stack` };
+  }
+  const envPath = path.join(path.dirname(composePath), '.env');
+  try {
+    if (!fs.existsSync(envPath)) {
+      return { env: '', path: envPath };
+    }
+    const env = fs.readFileSync(envPath, 'utf8');
+    return { env, path: envPath };
+  } catch (err) {
+    return { error: `Failed to read .env file: ${err.message}` };
+  }
+}
+
+export function updateStackEnvFile(stackName, env) {
+  if (!stackName || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(stackName)) {
+    return { error: 'Invalid stack name' };
+  }
+  if (typeof env !== 'string') {
+    return { error: '.env content must be a string.' };
+  }
+  const managed = scanManagedStacks();
+  const composePath = managed.get(stackName);
+  if (!composePath) {
+    return { error: `Stack "${stackName}" is not a managed stack` };
+  }
+  const envPath = path.join(path.dirname(composePath), '.env');
+  try {
+    if (env.trim().length === 0) {
+      // Clean up empty .env files
+      if (fs.existsSync(envPath)) fs.unlinkSync(envPath);
+    } else {
+      fs.writeFileSync(envPath, env, 'utf8');
+    }
+    return { ok: true };
+  } catch (err) {
+    return { error: `Failed to write .env file: ${err.message}` };
+  }
+}
+
 // --- Create stack ---
 
-export function createStack(name, yaml, deploy = false) {
+export function createStack(name, yaml, deploy = false, env = '') {
   if (!name || typeof name !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(name) || name.length > 64) {
     return { error: 'Invalid stack name. Use lowercase letters, numbers, and hyphens (max 64 chars).' };
   }
@@ -1042,6 +1091,9 @@ export function createStack(name, yaml, deploy = false) {
     fs.mkdirSync(stackDir);
     const composePath = path.join(stackDir, 'compose.yaml');
     fs.writeFileSync(composePath, yaml, 'utf8');
+    if (env && typeof env === 'string' && env.trim().length > 0) {
+      fs.writeFileSync(path.join(stackDir, '.env'), env, 'utf8');
+    }
     stacksCache = null;
 
     if (deploy) {

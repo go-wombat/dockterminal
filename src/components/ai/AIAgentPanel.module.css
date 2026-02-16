@@ -37,12 +37,16 @@
   font-size: 12px;
   color: var(--color-primary);
   padding: 3px 0 3px 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .suggestion {
   font-size: 12px;
   color: var(--color-warning-light);
   padding: 3px 0 3px 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .autofixCmd {
@@ -101,4 +105,159 @@
   font-size: 12px;
   color: var(--color-primary);
   line-height: 2;
+}
+
+/* Problem container list */
+
+.problemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.problemRow:last-of-type {
+  border-bottom: none;
+}
+
+.problemInfo {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.problemName {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.problemStatus {
+  color: var(--color-danger);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.problemImage {
+  color: var(--color-muted);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.investigateBtn {
+  padding: 4px 12px;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 1px;
+  background: rgba(0, 255, 65, 0.05);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Investigation log area */
+
+.logArea {
+  max-height: 400px;
+  overflow: auto;
+  margin-top: 12px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  background: rgba(0, 0, 0, 0.3);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.cursor {
+  display: inline-block;
+  color: var(--color-primary);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Step styles */
+
+.stepThinking {
+  color: var(--color-muted);
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding: 4px 0;
+}
+
+.stepReasoning {
+  color: var(--color-primary);
+  padding: 2px 0 2px 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.stepToolCall {
+  color: var(--color-primary);
+  background: rgba(0, 255, 65, 0.05);
+  padding: 4px 8px;
+  margin: 4px 0;
+  border-left: 2px solid var(--color-primary);
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.stepToolResult {
+  color: var(--color-warning-light);
+  padding: 4px 8px;
+  margin: 2px 0 6px;
+  font-size: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 150px;
+  overflow: auto;
+  opacity: 0.85;
+}
+
+.truncated {
+  color: var(--color-muted);
+  font-size: 9px;
+}
+
+.stepBlocked {
+  color: var(--color-danger);
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.stepWarning {
+  color: var(--color-warning);
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.stepError {
+  color: var(--color-danger);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Toggle investigation log */
+
+.toggleSteps {
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--color-muted);
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+
+.toggleSteps:hover {
+  color: var(--color-primary);
 }
