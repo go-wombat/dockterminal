@@ -266,7 +266,7 @@ export function scanManagedStacks() {
     if (!fs.existsSync(STACKS_DIR)) return managed;
     const entries = fs.readdirSync(STACKS_DIR, { withFileTypes: true });
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
+      if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
       const dir = path.join(STACKS_DIR, entry.name);
       for (const f of ['compose.yaml', 'compose.yml', 'docker-compose.yml']) {
         const composePath = path.join(dir, f);

@@ -6,7 +6,7 @@ DockTerminal is a retro CRT-styled Docker management dashboard. Scanlines, phosp
 
 No Electron. No Docker SDK. Just a React SPA that shells out to the Docker CLI.
 
-<!-- Add a screenshot here: ![DockTerminal dashboard](docs/screenshot.png) -->
+![DockTerminal dashboard](docs/screenshot.png)
 
 ---
 
