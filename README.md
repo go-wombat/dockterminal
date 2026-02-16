@@ -4,6 +4,8 @@
 
 DockTerminal is a retro CRT-styled Docker management dashboard. Scanlines, phosphor glow, green-on-black — manage your containers like you're hacking into a mainframe from 1987.
 
+DockTerminal manages **your** stacks — not every container on the system. Drop a compose project into your stacks directory and you get full control: start, stop, restart, shell, logs, compose editor. Everything else running on the host still shows up, but read-only — you can see it, not break it.
+
 No Electron. No Docker SDK. Just a React SPA that shells out to the Docker CLI.
 
 ![DockTerminal dashboard](docs/screenshot.png)
