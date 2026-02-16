@@ -112,6 +112,25 @@ A **managed stack** is any subdirectory in your stacks dir containing a compose 
 
 Compose projects detected via `docker compose ls` that live outside your stacks dir show up as read-only. Containers not in any compose project are grouped under "standalone".
 
+### Adding existing projects
+
+To manage an existing Docker Compose project, symlink it into your stacks directory:
+
+```bash
+ln -s /path/to/your/project stacks/projectname
+```
+
+When running DockTerminal in Docker, also mount the project as a volume in `docker-compose.yml`:
+
+```yaml
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock
+  - ./stacks:/opt/stacks
+  - /path/to/your/project:/opt/stacks/projectname
+```
+
+Restart DockTerminal and the project will appear as a managed stack with full controls.
+
 ---
 
 ## 🔒 Security
