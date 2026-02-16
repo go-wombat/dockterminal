@@ -59,7 +59,8 @@ export default function DashboardLayout() {
   const [rightTab, setRightTab] = useState("INFO");
   const [shellOpen, setShellOpen] = useState(false);
   const time = useClock();
-  const { hostname } = useSystemInfo();
+  const systemInfo = useSystemInfo();
+  const { hostname } = systemInfo;
   const systemStats = useSystemStats(3000);
   const { stacks, containers, refresh: refreshStacks } = useDockerStacks(3000);
   const { detail: containerDetail, loading: detailLoading } = useContainerDetail(selectedContainer?.id);
@@ -385,7 +386,7 @@ export default function DashboardLayout() {
   }, [stacks, stackSearch]);
 
   if (!bootDone) {
-    return <BootScreen bootStage={bootStage} />;
+    return <BootScreen bootStage={bootStage} systemInfo={systemInfo} stackCount={stacks.length} />;
   }
 
   return (
