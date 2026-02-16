@@ -13,12 +13,13 @@ const TOOL_RESULT_PREVIEW = 500;
 const sessions = new Map();
 
 // Clean up old sessions after 5 minutes
+// .unref() so this timer doesn't prevent process exit (e.g. during vite build)
 setInterval(() => {
   const cutoff = Date.now() - 5 * 60 * 1000;
   for (const [id, session] of sessions) {
     if (session.createdAt < cutoff) sessions.delete(id);
   }
-}, 60000);
+}, 60000).unref();
 
 /**
  * Start an investigation session. Returns { sessionId }.

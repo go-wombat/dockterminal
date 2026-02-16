@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import {
@@ -16,6 +17,8 @@ import {
   createStack,
   getStackFile,
   updateStackFile,
+  getStackEnvFile,
+  updateStackEnvFile,
   restartAllStacks,
   pullAllImages,
   dockerPrune,
@@ -115,7 +118,7 @@ function systemInfoPlugin() {
         // /api/stack/create (POST)
         if (url === '/api/stack/create' && req.method === 'POST') {
           const body = await readBody(req);
-          return json(res, createStack(body.name, body.yaml, body.deploy === true));
+          return json(res, createStack(body.name, body.yaml, body.deploy === true, body.env || ''));
         }
 
         // Bulk operations
@@ -135,10 +138,24 @@ function systemInfoPlugin() {
           return json(res, getStackFile(fileGetMatch[1]));
         }
 
-        // /api/stack/:name/file (PUT — update compose file)
+        // /api/stack/:name/file (PUT — update compose file + optional env)
         if (fileGetMatch && req.method === 'PUT') {
           const body = await readBody(req);
-          return json(res, updateStackFile(fileGetMatch[1], body.yaml));
+          const result = updateStackFile(fileGetMatch[1], body.yaml);
+          if (result.ok && body.env !== undefined) {
+            updateStackEnvFile(fileGetMatch[1], body.env);
+          }
+          return json(res, result);
+        }
+
+        // /api/stack/:name/env (GET/PUT)
+        const envMatch = url.match(/^\/api\/stack\/([a-zA-Z0-9][a-zA-Z0-9_.-]*)\/env$/);
+        if (envMatch && req.method === 'GET') {
+          return json(res, getStackEnvFile(envMatch[1]));
+        }
+        if (envMatch && req.method === 'PUT') {
+          const body = await readBody(req);
+          return json(res, updateStackEnvFile(envMatch[1], body.env));
         }
 
         // /api/stack/:name/stream?action= (GET — SSE)

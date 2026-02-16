@@ -11,3 +11,4 @@ services:
       - ./stacks:/opt/stacks
     environment:
       - DOCKTERMINAL_STACKS_DIR=/opt/stacks
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
