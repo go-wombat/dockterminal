@@ -109,7 +109,7 @@ export default function DashboardLayout() {
 
   // Fetch AI agent status once on mount
   useEffect(() => {
-    fetch('/api/agent/status').then(r => r.json()).then(setAgentStatus).catch(() => {});
+    fetch('/api/agent/status').then(r => r.json()).then(setAgentStatus).catch(() => setAgentStatus({ configured: false }));
   }, []);
 
   const filteredLogs = logs.filter(log => {

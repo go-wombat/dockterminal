@@ -31,7 +31,7 @@ export default function AIAgentPanel({ containers, stacks, agentStatus }) {
     investigate(container, stackContext);
   };
 
-  const configured = agentStatus?.configured !== false;
+  const configured = agentStatus?.configured === true;
   const isInvestigating = status === 'starting' || status === 'investigating';
 
   return (
