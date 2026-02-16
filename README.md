@@ -1,6 +1,6 @@
 # DockTerminal
 
-### Your Docker homelab deserves a cooler dashboard.
+### Your Docker homelab deserves a cooler dashboard. 🖥️
 
 DockTerminal is a retro CRT-styled Docker management dashboard. Scanlines, phosphor glow, green-on-black — manage your containers like you're hacking into a mainframe from 1987.
 
@@ -10,7 +10,7 @@ No Electron. No Docker SDK. Just a React SPA that shells out to the Docker CLI.
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
 docker compose up -d
@@ -18,41 +18,41 @@ docker compose up -d
 
 Open [http://localhost:5001](http://localhost:5001). That's it.
 
-> **Heads up:** DockTerminal has no built-in authentication. See [Security](#security) before exposing it beyond localhost.
+> **Heads up:** DockTerminal has no built-in authentication. See [Security](#-security) before exposing it beyond localhost.
 
 ---
 
 ## What You Get
 
-### Stacks & Containers
+### 📦 Stacks & Containers
 Compose projects are detected automatically. Managed stacks (from your stacks directory) get full controls — up, down, restart, stop, edit compose files. Unmanaged projects show up read-only. Standalone containers get their own group.
 
-### Live Stats
+### 📊 Live Stats
 CPU, memory, network I/O, and container resource usage — polled every 3 seconds. No agents, no daemons, no overhead.
 
-### Shell Terminal
+### 💻 Shell Terminal
 `docker exec` straight from the browser. Real shell, real output, ANSI colors preserved. Type commands, see results.
 
-### Compose Editor
+### ✏️ Compose Editor
 Create and edit stacks with a split-pane YAML editor. Live service graph on the right shows your services, dependencies, and networks as you type. Ships with starter templates (Nginx + SSL, Postgres + Redis, Node.js).
 
-### AI Diagnostics
+### 🤖 AI Diagnostics
 Auto-scans for non-running containers and generates a diagnosis: exit codes, image state, multi-container impact, and a recommended fix. One-click execute (with confirmation) to restart or resolve.
 
-### Streaming Operations
+### 🔴 Streaming Operations
 Compose up/down operations stream live output via SSE. Watch your stack come online in real time — colored output, status indicators, exit codes.
 
-### Logs
+### 📜 Logs
 Aggregated Docker events or per-container logs. Filter by level (INFO / WARN / ERR) and search by keyword. Color-coded, auto-scrolling.
 
-### The Aesthetic
+### ✨ The Aesthetic
 CRT scanlines, vignette overlay, glitching logo text, block-character progress bars, phosphor green on pitch black. Boot sequence on first load. Status bar with host OS, Docker version, and network throughput. It looks like a terminal from a game you love.
 
 ---
 
-## Installation
+## 📥 Installation
 
-### Docker (recommended)
+### 🐳 Docker (recommended)
 
 The default `docker-compose.yml` binds to port **5001**, mounts the Docker socket, and uses `/opt/stacks` for managed stacks. The image includes a healthcheck on `/api/health`.
 
@@ -69,7 +69,7 @@ services:
       - "5001:5001"              # change the left side to remap the host port
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /path/to/your/stacks:/opt/stacks
+      - ./stacks:/opt/stacks          # or /path/to/your/stacks:/opt/stacks
     environment:
       - DOCKTERMINAL_STACKS_DIR=/opt/stacks
 ```
@@ -101,7 +101,7 @@ To preview a production build locally: `npm run preview`.
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
 | Variable | Default | Applies to | Description |
 |---|---|---|---|
@@ -114,7 +114,7 @@ Compose projects detected via `docker compose ls` that live outside your stacks 
 
 ---
 
-## Security
+## 🔒 Security
 
 DockTerminal has **no built-in authentication or authorization**. Anyone who can reach the port can view, stop, restart, and remove your containers — and open a shell into any running container.
 
@@ -130,7 +130,7 @@ The shell terminal blocks a set of known dangerous commands (`rm -rf /`, `shutdo
 
 ---
 
-## Tech
+## 🛠️ Tech
 
 - React 19, Vite, Express
 - Zero UI libraries — every component is hand-built

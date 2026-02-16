@@ -8,6 +8,6 @@ services:
       - "5001:5001"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /opt/stacks:/opt/stacks
+      - ./stacks:/opt/stacks
     environment:
       - DOCKTERMINAL_STACKS_DIR=/opt/stacks
