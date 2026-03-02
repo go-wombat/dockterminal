@@ -61,15 +61,6 @@ export default function DashboardLayout() {
   const [streamingOp, setStreamingOp] = useState(null);
   const [agentStatus, setAgentStatus] = useState(null);
 
-  // Auto-expand managed non-stopped stacks when data arrives
-  useEffect(() => {
-    if (stacks.length > 0) {
-      setExpandedStacks(prev => {
-        if (prev.size > 0) return prev;
-        return new Set(stacks.filter(s => s.managed && s.status !== 'stopped').map(s => s.name));
-      });
-    }
-  }, [stacks]);
 
   // Keep selectedContainer data fresh from polling
   useEffect(() => {
