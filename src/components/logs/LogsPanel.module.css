@@ -92,6 +92,8 @@
   padding: 3px 0;
   display: flex;
   gap: 8px;
+  line-height: 1.5;
+  white-space: nowrap;
 }
 
 .logTime {
