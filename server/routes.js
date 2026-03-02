@@ -2,7 +2,6 @@ import { Router } from 'express';
 import {
   getSystemInfo,
   getSystemStats,
-  getDockerStats,
   getStacks,
   getDockerEvents,
   getAllContainerLogs,
@@ -34,7 +33,6 @@ router.get('/api/health', (_req, res) => {
 // System endpoints
 router.get('/api/system-info', (_req, res) => res.json(getSystemInfo()));
 router.get('/api/system-stats', (_req, res) => res.json(getSystemStats()));
-router.get('/api/docker-stats', (_req, res) => res.json(getDockerStats()));
 
 // Stacks & events
 router.get('/api/stacks', async (_req, res) => res.json(await getStacks()));
