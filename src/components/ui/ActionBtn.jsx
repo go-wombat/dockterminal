@@ -8,7 +8,7 @@ export default function ActionBtn({ label, title, color = "#007a22", onClick, sm
         border: `1px solid ${disabled ? "#003310" : color + "44"}`,
         color: disabled ? "#003310" : color,
         cursor: disabled ? "not-allowed" : "pointer",
-        fontSize: small ? 10 : 11,
+        fontSize: small ? 10 : 14,
         lineHeight: 1,
         transition: "all 0.15s",
         userSelect: "none",
