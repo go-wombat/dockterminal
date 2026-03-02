@@ -29,7 +29,7 @@
 
 .columnHeaders {
   display: grid;
-  grid-template-columns: 20px 1fr 140px 80px 140px 100px 70px;
+  grid-template-columns: 20px 1fr 1fr 80px 140px 100px 70px;
   gap: 8px;
   padding: 4px 12px 4px 32px;
   font-size: 9px;
