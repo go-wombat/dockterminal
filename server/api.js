@@ -285,6 +285,47 @@ let stacksCache = null;
 let stacksCacheTs = 0;
 const STACKS_CACHE_TTL = 2000;
 
+// Volume sizes cache (30s TTL — docker system df -v is expensive)
+let volumeSizesCache = null;
+let volumeSizesCacheTs = 0;
+const VOLUME_SIZES_CACHE_TTL = 30000;
+
+function getVolumeSizes() {
+  const now = Date.now();
+  if (volumeSizesCache && now - volumeSizesCacheTs < VOLUME_SIZES_CACHE_TTL) {
+    return volumeSizesCache;
+  }
+  const sizes = new Map();
+  try {
+    const raw = runArgs('docker', ['system', 'df', '-v', '--format', '{{json .}}'], 10000);
+    if (raw) {
+      for (const line of raw.split('\n')) {
+        if (!line) continue;
+        try {
+          const obj = JSON.parse(line);
+          // docker system df -v outputs volume entries with Name and Size fields
+          if (obj.Name && obj.Size) {
+            sizes.set(obj.Name, obj.Size);
+          }
+        } catch {}
+      }
+    }
+  } catch {}
+  volumeSizesCache = sizes;
+  volumeSizesCacheTs = Date.now();
+  return sizes;
+}
+
+function getBindMountSize(sourcePath) {
+  try {
+    const output = execFileSync('du', ['-sh', sourcePath], { timeout: 2000 }).toString().trim();
+    const match = output.match(/^([\d.]+\S*)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 function spawnAsync(bin, args, timeout = 10000) {
   return new Promise((resolve) => {
     const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -488,13 +529,25 @@ export function getContainerInspect(containerId) {
       !FILTERED_ENV_PREFIXES.some(p => (k + '=').startsWith(p))
     );
 
-    // Mounts
-    const mounts = (data.Mounts || []).map(m => ({
-      source: m.Source || '',
-      destination: m.Destination || '',
-      mode: m.Mode || 'rw',
-      type: m.Type || 'bind',
-    }));
+    // Mounts (with size info)
+    const volSizes = getVolumeSizes();
+    const mounts = (data.Mounts || []).map(m => {
+      const type = m.Type || 'bind';
+      let size = null;
+      if (type === 'volume' && m.Name) {
+        size = volSizes.get(m.Name) || null;
+      } else if (type === 'bind' && m.Source) {
+        size = getBindMountSize(m.Source);
+      }
+      return {
+        source: m.Source || '',
+        destination: m.Destination || '',
+        mode: m.Mode || 'rw',
+        type,
+        name: m.Name || '',
+        size,
+      };
+    });
 
     // Ports
     const ports = data.NetworkSettings?.Ports || {};

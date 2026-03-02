@@ -159,7 +159,10 @@ export default function DetailPanel({ container, containerDetail, detailLoading,
               )}
               {mounts.map((m, i) => (
                 <div key={i} className={styles.volumeRow}>
-                  <div style={{ color: "#00ff41" }}>{m.destination}</div>
+                  <div style={{ color: "#00ff41" }}>
+                    {m.destination}
+                    {m.size && <span style={{ color: "#00aa30", marginLeft: 6 }}>[{m.size}]</span>}
+                  </div>
                   <div style={{ color: "#007a22", fontSize: 10 }}>{"\u2192"} {m.source} ({m.type}, {m.mode})</div>
                 </div>
               ))}
