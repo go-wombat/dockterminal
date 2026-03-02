@@ -1,6 +1,6 @@
 .bar {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 1px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-border);

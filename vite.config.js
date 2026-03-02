@@ -4,7 +4,6 @@ import react from '@vitejs/plugin-react';
 import {
   getSystemInfo,
   getSystemStats,
-  getDockerStats,
   getStacks,
   getDockerEvents,
   getAllContainerLogs,
@@ -51,7 +50,6 @@ function systemInfoPlugin() {
       // Existing endpoints
       server.middlewares.use('/api/system-info', (_req, res) => json(res, getSystemInfo()));
       server.middlewares.use('/api/system-stats', (_req, res) => json(res, getSystemStats()));
-      server.middlewares.use('/api/docker-stats', (_req, res) => json(res, getDockerStats()));
 
       // New: stacks
       server.middlewares.use('/api/stacks', async (_req, res) => json(res, await getStacks()));

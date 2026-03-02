@@ -9,6 +9,8 @@ const DEFAULTS = {
   loadAvg: ['0.00', '0.00', '0.00'],
   netRxBytesPerSec: 0,
   netTxBytesPerSec: 0,
+  totalDiskGb: 0,
+  usedDiskGb: 0,
   dockerTotal: 0,
   dockerRunning: 0,
   dockerStopped: 0,
@@ -21,19 +23,10 @@ export function useSystemStats(intervalMs = 3000) {
     let active = true;
 
     const fetchStats = () => {
-      Promise.all([
-        fetch('/api/system-stats').then(r => r.json()),
-        fetch('/api/docker-stats').then(r => r.json()),
-      ])
-        .then(([sys, docker]) => {
-          if (active) {
-            setStats({
-              ...sys,
-              dockerTotal: docker.total,
-              dockerRunning: docker.running,
-              dockerStopped: docker.stopped,
-            });
-          }
+      fetch('/api/system-stats')
+        .then(r => r.json())
+        .then(data => {
+          if (active) setStats(data);
         })
         .catch(() => {});
     };

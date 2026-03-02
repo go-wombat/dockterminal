@@ -5,12 +5,14 @@ export default function StatsBar({
   cpuPercent, physicalCores, logicalCores,
   usedMemMb, totalMemMb,
   dockerTotal, dockerRunning, dockerStopped,
+  usedDiskGb, totalDiskGb,
 }) {
   const stats = [
     { label: "STACKS", value: `${stackCount}`, sub: `${stacksRunning} running${stacksDegraded > 0 ? ` \u2022 ${stacksDegraded} degraded` : ""}` },
     { label: "CPU LOAD", value: `${cpuPercent.toFixed(1)}%`, sub: `${physicalCores}C / ${logicalCores}T` },
     { label: "MEMORY", value: `${usedMemMb}MB`, sub: `/ ${totalMemMb}MB` },
     { label: "CONTAINERS", value: `${dockerTotal}`, sub: `${dockerRunning} active \u2022 ${dockerStopped} stopped` },
+    { label: "DISK", value: `${usedDiskGb} GB`, sub: `/ ${totalDiskGb} GB` },
   ];
 
   return (

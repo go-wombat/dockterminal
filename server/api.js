@@ -63,6 +63,11 @@ let prevNetBytes = null;
 let prevNetTime = null;
 let cachedPhysicalCores = null;
 
+// Disk stats cache (10s TTL — statfsSync rarely changes)
+let diskStatsCache = null;
+let diskStatsCacheTs = 0;
+const DISK_STATS_CACHE_TTL = 10000;
+
 function getNetBytes() {
   const platform = os.platform();
   let rx = 0, tx = 0;
@@ -180,6 +185,45 @@ export function getSystemStats() {
   prevNetBytes = net;
   prevNetTime = netNow;
 
+  // Disk usage (root filesystem, cached with 10s TTL)
+  let totalDiskGb = 0;
+  let usedDiskGb = 0;
+  const diskNow = Date.now();
+  if (diskStatsCache && diskNow - diskStatsCacheTs < DISK_STATS_CACHE_TTL) {
+    totalDiskGb = diskStatsCache.totalDiskGb;
+    usedDiskGb = diskStatsCache.usedDiskGb;
+  } else {
+    try {
+      const fsStats = fs.statfsSync('/');
+      totalDiskGb = (fsStats.blocks * fsStats.bsize) / (1024 ** 3);
+      const freeDiskGb = (fsStats.bavail * fsStats.bsize) / (1024 ** 3);
+      usedDiskGb = totalDiskGb - freeDiskGb;
+    } catch {}
+    diskStatsCache = { totalDiskGb, usedDiskGb };
+    diskStatsCacheTs = Date.now();
+  }
+
+  // Docker container counts (derived from cached stacks data to avoid extra docker ps)
+  let dockerTotal = 0, dockerRunning = 0, dockerStopped = 0;
+  if (stacksCache) {
+    for (const stack of stacksCache.stacks) {
+      for (const c of stack.containers) {
+        dockerTotal++;
+        if (c.status === 'running') dockerRunning++;
+        else dockerStopped++;
+      }
+    }
+  } else {
+    // Fallback if stacks haven't been fetched yet
+    const raw = runArgs('docker', ['ps', '-a', '--format', '{{.State}}']);
+    if (raw) {
+      const states = raw.split('\n').filter(Boolean);
+      dockerRunning = states.filter(s => s === 'running').length;
+      dockerTotal = states.length;
+      dockerStopped = dockerTotal - dockerRunning;
+    }
+  }
+
   return {
     cpuPercent: Math.round(cpuPercent * 10) / 10,
     physicalCores,
@@ -189,21 +233,11 @@ export function getSystemStats() {
     loadAvg: os.loadavg().map(v => v.toFixed(2)),
     netRxBytesPerSec: Math.round(netRxBytesPerSec),
     netTxBytesPerSec: Math.round(netTxBytesPerSec),
-  };
-}
-
-// --- Docker container stats ---
-
-export function getDockerStats() {
-  const raw = runArgs('docker', ['ps', '-a', '--format', '{{.State}}']);
-  if (!raw) return { total: 0, running: 0, stopped: 0 };
-
-  const states = raw.split('\n').filter(Boolean);
-  const running = states.filter(s => s === 'running').length;
-  return {
-    total: states.length,
-    running,
-    stopped: states.length - running,
+    totalDiskGb: Math.round(totalDiskGb * 10) / 10,
+    usedDiskGb: Math.round(usedDiskGb * 10) / 10,
+    dockerTotal,
+    dockerRunning,
+    dockerStopped,
   };
 }
 
@@ -258,9 +292,23 @@ function parseMemMb(memUsage) {
   return 0;
 }
 
-// --- Managed stacks scanning ---
+// --- Managed stacks scanning (cached with 30s TTL) ---
+
+let managedStacksCache = null;
+let managedStacksCacheTs = 0;
+const MANAGED_STACKS_CACHE_TTL = 30000;
+
+function invalidateManagedStacksCache() {
+  managedStacksCache = null;
+  managedStacksCacheTs = 0;
+}
 
 export function scanManagedStacks() {
+  const now = Date.now();
+  if (managedStacksCache && now - managedStacksCacheTs < MANAGED_STACKS_CACHE_TTL) {
+    return managedStacksCache;
+  }
+
   const managed = new Map();
   try {
     if (!fs.existsSync(STACKS_DIR)) return managed;
@@ -277,6 +325,9 @@ export function scanManagedStacks() {
       }
     }
   } catch {}
+
+  managedStacksCache = managed;
+  managedStacksCacheTs = Date.now();
   return managed;
 }
 
@@ -316,12 +367,25 @@ function getVolumeSizes() {
   return sizes;
 }
 
+// Bind mount size cache (60s TTL — du -sh is slow per mount)
+const bindMountSizeCache = new Map(); // path -> { size, ts }
+const BIND_MOUNT_SIZE_CACHE_TTL = 60000;
+
 function getBindMountSize(sourcePath) {
+  const now = Date.now();
+  const cached = bindMountSizeCache.get(sourcePath);
+  if (cached && now - cached.ts < BIND_MOUNT_SIZE_CACHE_TTL) {
+    return cached.size;
+  }
+
   try {
     const output = execFileSync('du', ['-sh', sourcePath], { timeout: 2000 }).toString().trim();
     const match = output.match(/^([\d.]+\S*)/);
-    return match ? match[1] : null;
+    const size = match ? match[1] : null;
+    bindMountSizeCache.set(sourcePath, { size, ts: Date.now() });
+    return size;
   } catch {
+    bindMountSizeCache.set(sourcePath, { size: null, ts: Date.now() });
     return null;
   }
 }
@@ -1069,6 +1133,7 @@ export function updateStackFile(stackName, yaml) {
   try {
     fs.writeFileSync(composePath, yaml, 'utf8');
     stacksCache = null;
+    invalidateManagedStacksCache();
     return { ok: true };
   } catch (err) {
     return { error: `Failed to write compose file: ${err.message}` };
@@ -1148,6 +1213,7 @@ export function createStack(name, yaml, deploy = false, env = '') {
       fs.writeFileSync(path.join(stackDir, '.env'), env, 'utf8');
     }
     stacksCache = null;
+    invalidateManagedStacksCache();
 
     if (deploy) {
       try {

@@ -406,6 +406,8 @@ export default function DashboardLayout() {
         dockerTotal={systemStats.dockerTotal}
         dockerRunning={systemStats.dockerRunning}
         dockerStopped={systemStats.dockerStopped}
+        usedDiskGb={systemStats.usedDiskGb}
+        totalDiskGb={systemStats.totalDiskGb}
       />
 
       <TabBar
